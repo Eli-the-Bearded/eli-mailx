@@ -69,6 +69,8 @@ send(mp, obuf, doign, prefix)
 	register FILE *ibuf;
 	char line[LINESIZE];
 	int ishead, infld, ignoring = 0, dostat, firstline;
+	int highlighting = 0;
+	struct ignoretab *dohl;
 	register char *cp, *cp2;
 	register int c = 0;
 	int length;
@@ -78,11 +80,11 @@ send(mp, obuf, doign, prefix)
 	 * Compute the prefix string, without trailing whitespace
 	 */
 	if (prefix != NOSTR) {
-		cp2 = 0;
-		for (cp = prefix; *cp; cp++)
-			if (*cp != ' ' && *cp != '\t')
-				cp2 = cp;
-		prefixlen = cp2 == 0 ? 0 : cp2 - prefix + 1;
+	  cp2 = 0;
+	  for (cp = prefix; *cp; cp++)
+	    if (*cp != ' ' && *cp != '\t')
+	      cp2 = cp;
+	  prefixlen = cp2 == 0 ? 0 : cp2 - prefix + 1;
 	}
 	ibuf = setinput(mp);
 	count = mp->m_size;
@@ -90,6 +92,17 @@ send(mp, obuf, doign, prefix)
 	dostat = doign == 0 || !isign("status", doign);
 	infld = 0;
 	firstline = 1;
+
+	/* If doign == 0 or if doign is saveignore, then we probably
+	 * are not printing to a pager or terminal, and we don't need
+	 * highlighting.
+	 */
+	if(doign && (doign != saveignore)) {
+	  dohl = highlight;
+	} else {
+	  dohl = 0;
+	}
+
 	/*
 	 * Process headers first
 	 */
@@ -103,7 +116,7 @@ send(mp, obuf, doign, prefix)
 			 * there to worry about
 			 */
 			firstline = 0;
-			ignoring = doign == ignoreall;
+			highlighting = ignoring = doign == ignoreall;
 		} else if (line[0] == '\n') {
 			/*
 			 * If line is blank, we've reached end of
@@ -116,7 +129,7 @@ send(mp, obuf, doign, prefix)
 				dostat = 0;
 			}
 			ishead = 0;
-			ignoring = doign == ignoreall;
+			highlighting = ignoring = doign == ignoreall;
 		} else if (infld && (line[0] == ' ' || line[0] == '\t')) {
 			/*
 			 * If this line is a continuation (via space or tab)
@@ -156,6 +169,10 @@ send(mp, obuf, doign, prefix)
 				*cp2 = 0;	/* temporarily null terminate */
 				if (doign && isign(line, doign))
 					ignoring = 1;
+				else if (dohl && ishl(line, dohl)) {
+					highlighting = 1;
+					*cp2 = c;	/* restore */
+				}
 				else if ((line[0] == 's' || line[0] == 'S') &&
 					 strcasecmp(line, "status") == 0) {
 					/*
@@ -168,6 +185,7 @@ send(mp, obuf, doign, prefix)
 					}
 					ignoring = 1;
 				} else {
+				        highlighting = 0;
 					ignoring = 0;
 					*cp2 = c;	/* restore */
 				}
@@ -175,6 +193,9 @@ send(mp, obuf, doign, prefix)
 			}
 		}
 		if (!ignoring) {
+		        if(highlighting) {
+			   starthl(obuf);
+			}
 			/*
 			 * Strip trailing whitespace from prefix
 			 * if line is blank.
@@ -188,6 +209,9 @@ send(mp, obuf, doign, prefix)
 			(void) fwrite(line, sizeof *line, length, obuf);
 			if (ferror(obuf))
 				return -1;
+		        if(highlighting) {
+			   endhl(obuf);
+			}
 		}
 	}
 	/*

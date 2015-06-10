@@ -136,6 +136,35 @@ touch(mp)
 }
 
 /*
+ * Echo a generic highlight sequence. No terminal type checking.
+ * Cheesy, but no need to link to curses either. 		BEG
+ */
+void
+starthl(strm)
+	FILE *strm;
+{
+    /* encode% $(tput smul)	# set mode underline
+     * %1b%5b%34%6d -> <ESC>[4m
+     */
+    (void)fprintf(strm,"%c[4m",0x1b);
+}
+
+/*
+ * Echo a generic highlight stop sequence. No terminal type checking.
+ * Cheesy, but no need to link to curses either. 		BEG
+ */
+void
+endhl(strm)
+	FILE *strm;
+{
+    /* encode% $(tput rmul)	# remove mode underline 
+     * %1b%5b%32%34%6d -> <ESC>[24m
+     */
+    (void)fprintf(strm,"%c[24m",0x1b);
+}
+
+
+/*
  * Test to see if the passed file name is a directory.
  * Return true if it is.
  */
@@ -721,3 +750,26 @@ member(realfield, table)
 			return (1);
 	return (0);
 }
+
+/*
+ * See if the given header field is supposed to be highlighted
+ */
+int
+ishl(field, highlight)
+	char *field;
+	struct ignoretab highlight[2];
+{
+	char realfld[BUFSIZ];
+
+	/*
+	 * Lower-case the string, so that "Status" and "status"
+	 * will hash to the same place.
+	 */
+	istrcpy(realfld, field, BUFSIZ);
+	realfld[BUFSIZ-1]='\0';
+	if (highlight[1].i_count > 0)
+		return (!member(realfld, highlight + 1));
+	else
+		return (member(realfld, highlight));
+}
+

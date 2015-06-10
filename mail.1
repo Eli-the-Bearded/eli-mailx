@@ -378,6 +378,11 @@ command does the same thing that
 .Ic save
 does, except that it does not mark the messages it
 is used on for deletion when you quit.
+.It Ic Copy
+.Pq Ic C
+Just like
+.Ic copy
+except a variable name holds the save file.
 .It Ic delete
 .Pq Ic d
 Takes a list of messages as argument and marks them all as deleted.
@@ -558,6 +563,11 @@ Takes a message list and a filename and appends each message in
 turn to the end of the file.
 The filename in quotes, followed by the line
 count and character count is echoed on the user's terminal.
+.It Ic Save
+.Pq Ic S
+Just like
+.Ic save
+except a variable name holds the save file.
 .It Ic set
 .Pq Ic se
 With no arguments, prints all variable values.

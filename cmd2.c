@@ -136,6 +136,23 @@ hitit:
 }
 
 /*
+ * Save a message in a file named in a variable.  Mark the message as saved
+ * so we can discard when the user quits.
+ */
+int
+savevar(v)
+	void *v;
+{
+	char *vn = v;
+	char *str = value(vn);
+
+	if(!str) {
+		return(1);
+	}
+	return save1(str, 1, "save", saveignore);
+}
+
+/*
  * Save a message in a file.  Mark the message as saved
  * so we can discard when the user quits.
  */
@@ -157,6 +174,21 @@ copycmd(v)
 {
 	char *str = v;
 
+	return save1(str, 0, "copy", saveignore);
+}
+/*
+ * Copy a message to a file named in a variable without affected its saved-ness
+ */
+int
+copycmdvar(v)
+	void *v;
+{
+	char *vn = v;
+	char *str = value(vn);
+
+	if(!str) {
+		return(1);
+	}
 	return save1(str, 0, "copy", saveignore);
 }
 
@@ -453,6 +485,19 @@ retfield(v)
 	char **list = v;
 
 	return ignore1(list, ignore + 1, "retained");
+}
+
+/*
+ * Add the given header fields to the highlight list.
+ * If no arguments, print the current list of highlighted fields.
+ */
+int
+hlfield(v)
+	void *v;
+{
+	char **list = v;
+
+	return ignore1(list, highlight, "highlighted");
 }
 
 /*
