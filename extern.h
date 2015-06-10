@@ -250,6 +250,7 @@ void	 stop __P((int));
 int	 stouch __P((void *));
 int	 swrite __P((void *));
 void	 tinit __P((void));
+void	 to7strcpy __P((char *, char *, int));
 int	 top __P((void *));
 void	 touch __P((struct message *));
 void	 ttyint __P((int));

@@ -281,3 +281,6 @@ struct ignoretab {
 	(void)fflush(stream); 						\
 	(void)ftruncate(fileno(stream), (off_t)ftell(stream));		\
 }
+
+/* ctime is broken on SuSE 10. Use ctime_r. */
+#define DONT_TRUST_CTIME

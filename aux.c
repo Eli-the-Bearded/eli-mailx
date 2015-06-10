@@ -143,10 +143,16 @@ void
 starthl(strm)
 	FILE *strm;
 {
+    char *hlst;
+
+    if ((hlst = value("starthlstr")) == NOSTR) {
+      return;
+    }
     /* encode% $(tput smul)	# set mode underline
      * %1b%5b%34%6d -> <ESC>[4m
+     * (void)fprintf(strm,"%c[4m",0x1b);
      */
-    (void)fprintf(strm,"%c[4m",0x1b);
+    (void)fprintf(strm,"%s",hlst);
 }
 
 /*
@@ -157,10 +163,16 @@ void
 endhl(strm)
 	FILE *strm;
 {
+    char *hlst;
+
+    if ((hlst = value("endhlstr")) == NOSTR) {
+      return;
+    }
     /* encode% $(tput rmul)	# remove mode underline 
      * %1b%5b%32%34%6d -> <ESC>[24m
+     * (void)fprintf(strm,"%c[24m",0x1b);
      */
-    (void)fprintf(strm,"%c[24m",0x1b);
+    (void)fprintf(strm,"%s",hlst);
 }
 
 
@@ -303,6 +315,29 @@ ishfield(linebuf, colon, field)
 	for (cp++; *cp == ' ' || *cp == '\t'; cp++)
 		;
 	return cp;
+}
+
+/*
+ * Copy a string, clobbering high-bits and control characters as we go
+ */
+void
+to7strcpy(dest, src, size)
+	register char *dest, *src;
+	int size;
+{
+	register char *max;
+
+	max=dest+size-1;
+	while (dest<=max) {
+		if (*src == 0)
+                  break;
+		if (0>(*src) || (((*src) != '\t') && ((*src) < ' '))) {
+			*dest++ = '~';
+		} else {
+			*dest++ = *src;
+		}
+		src++;
+	}
 }
 
 /*

@@ -441,7 +441,7 @@ edstop()
 	register struct message *mp;
 	FILE *obuf, *ibuf, *readstat = NULL;
 	struct stat statb;
-	char *tempname;
+	char tempname[LINESIZE];
 
 	if (readonly)
 		return;
@@ -469,14 +469,19 @@ edstop()
 	if (!gotcha || Tflag != NOSTR)
 		goto done;
 	ibuf = NULL;
-	if (stat(mailname, &statb) >= 0 && statb.st_size > mailsize) {
-		tempname = tempnam(tmpdir, "mbox");
 
-		if ((obuf = Fopen(tempname, "w")) == NULL) {
+	sprintf(tempname, "%s/mboxXXXXXX", tmpdir);
+	if (stat(mailname, &statb) >= 0 && statb.st_size > mailsize) {
+		obuf = mkstemp(tempname);
+
+		if (obuf == -1) {
 			perror(tempname);
 			relsesigs();
 			reset(0);
 		}
+		chmod(tempname,0600);
+		ftruncate(tempname,0);
+
 		if ((ibuf = Fopen(mailname, "r")) == NULL) {
 			perror(mailname);
 			Fclose(obuf);
@@ -496,7 +501,6 @@ edstop()
 			reset(0);
 		}
 		rm(tempname);
-		free(tempname);
 	}
 	printf("\"%s\" ", mailname);
 	fflush(stdout);

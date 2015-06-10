@@ -67,7 +67,7 @@ send(mp, obuf, doign, prefix)
 {
 	long count;
 	register FILE *ibuf;
-	char line[LINESIZE];
+	char line[LINESIZE], dbline[LINESIZE];
 	int ishead, infld, ignoring = 0, dostat, firstline;
 	int highlighting = 0;
 	struct ignoretab *dohl;
@@ -75,6 +75,10 @@ send(mp, obuf, doign, prefix)
 	register int c = 0;
 	int length;
 	int prefixlen = 0;
+	int debughl = 0;
+
+	if (value("debughl") != NOSTR)
+	  	debughl = 1;
 
 	/*
 	 * Compute the prefix string, without trailing whitespace
@@ -107,6 +111,7 @@ send(mp, obuf, doign, prefix)
 	 * Process headers first
 	 */
 	while (count > 0 && ishead) {
+	        dbline[0] = 0;
 		if (fgets(line, LINESIZE, ibuf) == NULL)
 			break;
 		count -= length = strlen(line);
@@ -117,6 +122,9 @@ send(mp, obuf, doign, prefix)
 			 */
 			firstline = 0;
 			highlighting = ignoring = doign == ignoreall;
+		  	if(debughl) {
+			    fprintf(stderr,"fl ");
+			}
 		} else if (line[0] == '\n') {
 			/*
 			 * If line is blank, we've reached end of
@@ -137,6 +145,9 @@ send(mp, obuf, doign, prefix)
 			 * (unless the field should be ignored).
 			 * In other words, nothing to do.
 			 */
+		  	if(debughl) {
+			    fprintf(stderr,"ct\n");
+			}
 		} else {
 			/*
 			 * Pick up the header field if we have one.
@@ -161,12 +172,16 @@ send(mp, obuf, doign, prefix)
 					(void) putc('\n', obuf);
 				ishead = 0;
 				ignoring = 0;
+				highlighting = 0;
 			} else {
 				/*
 				 * If it is an ignored field and
 				 * we care about such things, skip it.
 				 */
 				*cp2 = 0;	/* temporarily null terminate */
+				istrcpy(dbline,line,LINESIZE);
+				highlighting = 0;
+				ignoring = 0;
 				if (doign && isign(line, doign))
 					ignoring = 1;
 				else if (dohl && ishl(line, dohl)) {
@@ -185,16 +200,29 @@ send(mp, obuf, doign, prefix)
 					}
 					ignoring = 1;
 				} else {
-				        highlighting = 0;
-					ignoring = 0;
 					*cp2 = c;	/* restore */
 				}
 				infld = 1;
 			}
 		}
-		if (!ignoring) {
+		if (ignoring) {
+			if(debughl) {
+			  fprintf(stderr,"ig ");
+			  if(highlighting) {
+			    fprintf(stderr,"hl ");
+			  }
+			  fprintf(stderr,"%s\n",dbline);
+			}
+		} else {
 		        if(highlighting) {
-			   starthl(obuf);
+		          if(debughl) {
+			    fprintf(stderr,"hl ");
+			  }
+			  starthl(obuf);
+			} else {
+		          if(debughl) {
+			    fprintf(stderr,"rg ");
+			  }
 			}
 			/*
 			 * Strip trailing whitespace from prefix
@@ -206,11 +234,24 @@ send(mp, obuf, doign, prefix)
 				else
 					(void) fwrite(prefix, sizeof *prefix,
 							prefixlen, obuf);
-			(void) fwrite(line, sizeof *line, length, obuf);
+
+			/* 
+			 * Strip trailing newline if highlighting, and
+			 * replace it after endhl()
+			 */
+			if(highlighting) {
+			  (void) fwrite(line, sizeof *line, length - 1, obuf);
+			} else {
+			  (void) fwrite(line, sizeof *line, length, obuf);
+			}
 			if (ferror(obuf))
 				return -1;
 		        if(highlighting) {
 			   endhl(obuf);
+			   putc('\n', obuf);
+			}
+		        if(debughl) {
+			  fprintf(stderr,"%s\n",dbline);
 			}
 		}
 	}
@@ -575,6 +616,7 @@ savemail(name, fi)
 {
 	register FILE *fo;
 	char buf[BUFSIZ];
+	char *ts;
 	register i;
 	time_t now;
 
@@ -582,8 +624,19 @@ savemail(name, fi)
 		perror(name);
 		return (-1);
 	}
+
 	(void) time(&now);
-	fprintf(fo, "From %s %s", myname, ctime(&now));
+#ifdef DONT_TRUST_CTIME
+	ts = (char*)malloc(40); /* really need just 26 */
+	if(ts == NULL) {
+	  return;
+	}
+	ctime_r(&now, ts);
+#else
+	ts = ctime(&now);
+#endif
+
+	fprintf(fo, "From %s %s", myname, ts);
 	while ((i = fread(buf, 1, sizeof buf, fi)) > 0)
 		(void) fwrite(buf, 1, i, fo);
 	(void) putc('\n', fo);

@@ -234,8 +234,18 @@ outof(names, fo, hp)
 
 	top = names;
 	np = names;
+
 	(void) time(&now);
+#ifdef DONT_TRUST_CTIME
+	date = (char*)malloc(40); /* really need just 26 */
+	if(date == NULL) {
+	  return;
+	}
+	ctime_r(&now, date);
+#else
 	date = ctime(&now);
+#endif
+
 	while (np != NIL) {
 		if (!isfileaddr(np->n_name) && np->n_name[0] != '|') {
 			np = np->n_flink;

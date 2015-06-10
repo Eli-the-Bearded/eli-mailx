@@ -180,9 +180,9 @@ printhead(mesg)
 {
 	struct message *mp;
 	char headline[LINESIZE], wcount[LINESIZE], *subjline, dispc, curind;
-	char pbuf[BUFSIZ];
+	char pbuf[BUFSIZ], *subj7line;
 	struct headline hl;
-	int subjlen;
+	int subjlen,k,wcl;
 	char *name;
 
 	mp = &message[mesg-1];
@@ -205,17 +205,41 @@ printhead(mesg)
 	if (mp->m_flag & MBOX)
 		dispc = 'M';
 	parse(headline, &hl, pbuf);
-	sprintf(wcount, "%3d/%-5ld", mp->m_lines, mp->m_size);
-	subjlen = screenwidth - 50 - strlen(wcount);
+
+	k = (mp->m_size + 1023) / 1024;
+	if(k < 3500) {
+	  sprintf(wcount, "%4d/%-3d ", mp->m_lines, k);
+	  wcl = strlen(wcount);
+	  subjlen = screenwidth - 50 - wcl;
+	  while(wcount[wcl - 1] == ' ') { wcl --; }
+	  if(wcount[wcl] == ' ') { wcount[wcl] = 'k'; }
+	} else {
+	  k = (mp->m_size + 1048575) / 1048576;
+	  sprintf(wcount, "%4d/%-3d ", mp->m_lines, k);
+	  wcl = strlen(wcount);
+	  subjlen = screenwidth - 50 - wcl;
+	  while(wcount[wcl - 1] == ' ') { wcl --; }
+	  if(wcount[wcl] == ' ') { wcount[wcl] = 'M'; }
+	}
+
 	name = value("show-rcpt") != NOSTR ?
 		skin(hfield("to", mp)) : nameof(mp, 0);
+
 	if (subjline == NOSTR || subjlen < 0)		/* pretty pathetic */
-		printf("%c%c%3d %-20.20s  %16.16s %s\n",
-			curind, dispc, mesg, name, hl.l_date, wcount);
-	else
-		printf("%c%c%3d %-20.20s  %16.16s %s \"%.*s\"\n",
-			curind, dispc, mesg, name, hl.l_date, wcount,
-			subjlen, subjline);
+		printf("%c%4d%c%-20.20s %16.16s %s\n",
+			dispc, mesg, curind, name, hl.l_date, wcount);
+	else {
+	        subj7line = malloc(subjlen + 1);
+		if(!subj7line) {
+		   (void)fprintf(stderr,"\nOut of memory!\n");
+		   exit(2);
+		}
+		subj7line[subjlen] = 0;
+		to7strcpy(subj7line, subjline, subjlen);
+		printf("%c%4d%c%-20.20s %16.16s %s \"%.*s\"\n",
+			dispc, mesg, curind, name, hl.l_date, wcount,
+			subjlen, subj7line);
+	}
 }
 
 /*
@@ -349,7 +373,7 @@ type1(msgvec, doign, page)
 		touch(mp);
 		dot = mp;
 		if (value("quiet") == NOSTR)
-			fprintf(obuf, "Message %d:\n", *ip);
+			fprintf(obuf, "Message %d of %d:\n", *ip, msgCount);
 		(void) send(mp, obuf, doign ? ignore : 0, NOSTR);
 	}
 close_pipe:
@@ -404,7 +428,7 @@ top(v)
 		touch(mp);
 		dot = mp;
 		if (value("quiet") == NOSTR)
-			printf("Message %d:\n", *ip);
+			printf("Message %d of %d:\n", *ip, msgCount);
 		ibuf = setinput(mp);
 		c = mp->m_lines;
 		if (!lineb)
