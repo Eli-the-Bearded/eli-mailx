@@ -329,13 +329,23 @@ to7strcpy(dest, src, size)
 
 	max=dest+size-1;
 	while (dest<=max) {
+		if((*src) < 0) {
+		    /* signed char, less than 0 is highbit */
+		    *dest++ = '~';
+		} else
+		if (((*src) == '\t') || ((*src) == '\r') || ((*src) == '\n')) {
+		    /* whitespace substitution */
+		    *dest++ = ' ';
+		} else
+		if (((*src) != 0) && (*src) < ' ') {
+		    /* control-char substitution */
+		    *dest++ = '~';
+		} else {
+		    *dest++ = *src;
+		}
+
 		if (*src == 0)
                   break;
-		if (0>(*src) || (((*src) != '\t') && ((*src) < ' '))) {
-			*dest++ = '~';
-		} else {
-			*dest++ = *src;
-		}
 		src++;
 	}
 }

@@ -52,6 +52,7 @@ static char rcsid[] = "$OpenBSD: cmdtab.c,v 1.6 1996/06/08 19:48:15 christos Exp
  */
 
 const struct cmd cmdtab[] = {
+        /* name         function        argtype         msgflag flag mask */
 	{ "next",	next,		NDMLIST,	0,	MMNDEL },
 	{ "alias",	group,		M|RAWLIST,	0,	1000 },
 	{ "print",	type,		MSGLIST,	0,	MMNDEL },
@@ -100,6 +101,7 @@ const struct cmd cmdtab[] = {
 	{ "Respond",	Respond,	R|I|MSGLIST,	0,	MMNDEL },
 	{ "reply",	respond,	R|I|MSGLIST,	0,	MMNDEL },
 	{ "respond",	respond,	R|I|MSGLIST,	0,	MMNDEL },
+	{ "rnmail",	rnmail,		R|I|MSGLIST,	0,	MMNDEL },
 	{ "edit",	editor,		I|MSGLIST,	0,	MMNORM },
 	{ "echo",	echo,		M|RAWLIST,	0,	1000 },
 	{ "quit",	quitcmd,	NOLIST,		0,	0 },

@@ -1,0 +1,63 @@
+#!/usr/local/bin/perl -w
+# Basic mime message
+# Eli the Bearded	Jun 13 2001
+
+my $sub = ' ';
+my $to  = 'foo@bar';	# overridden on command line
+my $from = 'bar@foo';	# you'll want to edit this
+my $num = 1;
+
+while(defined($ARGV[0]) and length($ARGV[0])) {
+  if(substr($ARGV[0],0,1) ne '-') {
+    if($ARGV[0] =~ /@/) {
+      $to   = shift;
+    } else {
+      $sub .= (shift @ARGV) . ' ';
+    }
+  } else {
+    if($ARGV[0] =~ /^-(\d+)$/) {
+      $num = -1 * $ARGV[0];
+      shift;
+    } else {
+      print "$0: usage: bmime [Subject] [to\@addr] [-N]\n";
+      print "\nDumps a basic mime message to STDOUT.\n";
+      print "Subject cannot contain @ signs, to must contain @ sign,\n";
+      print "use -N with a number to give count of attachement stubs.\n";
+      exit(2);
+    }
+  }
+}
+
+print <<"MIMEMESS";
+To: $to
+From: $from
+Bcc: 
+Subject:$sub
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="--=bind$$=--"
+
+----=bind$$=--
+Content-Type: text/plain; charset=us-ascii
+
+
+MIMEMESS
+
+while($num) {
+
+print <<"ATTACHMESS";
+----=bind$$=--
+Content-Type: application/octet-stream; name="FILENAME"
+Content-Disposition: attachment; filename="FILENAME"
+Content-Transfer-Encoding: base64
+X-Encoder: "ay\$\@a :+1r! mmencode < FILENAME
+
+
+ATTACHMESS
+$num --;
+}
+
+print  <<"ENDMESS";
+----=bind$$=----
+ENDMESS
+
+__END__

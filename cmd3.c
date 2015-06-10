@@ -163,10 +163,18 @@ help(v)
 {
 	register c;
 	register FILE *f;
+	char *alt_help;
 
-	if ((f = Fopen(_PATH_HELP, "r")) == NULL) {
-		perror(_PATH_HELP);
-		return(1);
+	if((alt_help = value("helpfile")) != NOSTR) {
+	  if ((f = Fopen(alt_help, "r")) == NULL) {
+		  perror(alt_help);
+		  return(1);
+	  }
+	} else {
+	  if ((f = Fopen(_PATH_HELP, "r")) == NULL) {
+		  perror(_PATH_HELP);
+		  return(1);
+	  }
 	}
 	while ((c = getc(f)) != EOF)
 		putchar(c);

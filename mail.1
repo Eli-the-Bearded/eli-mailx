@@ -310,7 +310,8 @@ goes to the
 .Ar n Ns 'th
 previous message and prints it.
 .It Ic \&?
-Prints a brief summary of commands.
+Prints a brief summary of commands from the default file or from
+.Ar helpfile .
 .It Ic \&!
 Executes the shell
 (see
@@ -481,6 +482,14 @@ If
 .Ic ignore
 is executed with no arguments, it lists the current set of
 ignored fields.
+.It Ic highlight
+Add the list of header fields named to the
+.Ar highlighted list .
+Header fields in the highlighted list are printed with
+.Ar starthlstr
+in front and 
+.Ar endhlstr
+after for the various type and print commands.
 .It Ic mail
 .Pq Ic m
 Takes as argument login names and distribution group names and sends

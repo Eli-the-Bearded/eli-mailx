@@ -83,6 +83,7 @@ ishead(linebuf)
 	/*
 	 * I guess we got it!
 	 */
+
 	return (1);
 }
 
@@ -119,19 +120,39 @@ parse(line, hl, pbuf)
 	hl->l_date = NOSTR;
 	cp = line;
 	sp = pbuf;
+
 	/*
 	 * Skip over "From" first.
+	 * if line started as:
+	 * From bgriffin@gracenote.com  Fri Jul 29 17:50:02 2011
 	 */
 	cp = nextword(cp, word);
+	/* word is now "From" and cp is
+	 * bgriffin@gracenote.com  Fri Jul 29 17:50:02 2011
+	 */
+
 	cp = nextword(cp, word);
+	/* word is now "bgriffin@gracenote.com" and cp is
+	 * Fri Jul 29 17:50:02 2011
+	 */
 	if (*word)
 		hl->l_from = copyin(word, &sp);
+
+	/* for the rare 
+	 * From username ttyN Date Here
+	 * form from line.
+	 */
 	if (cp != NOSTR && cp[0] == 't' && cp[1] == 't' && cp[2] == 'y') {
 		cp = nextword(cp, word);
 		hl->l_tty = copyin(word, &sp);
 	}
+
 	if (cp != NOSTR)
 		hl->l_date = copyin(cp, &sp);
+
+	/* some formats can be tweaked to a more compact form */
+        if(isdate_tweak(hl->l_date))
+		tweak(hl->l_date, 0);
 }
 
 /*
@@ -154,6 +175,136 @@ copyin(src, space)
 	*space = cp;
 	return (top);
 }
+
+
+/* Macros for tweak()ing */
+#define datesep		('/')
+#define ADD(a,b)	((a)*256+(b))
+#define cur		(date[src])
+#define cursp		(cur==' ')
+#define curnsp		(cur!=' ')
+#define next		(date[src+1])
+#define nnext		(date[src+2])
+#define setnext		(date[dest++])
+#define pad		(setnext=' ')
+#define skip		(src++)
+#define dcp		(setnext=date[skip])
+#define finish		if(src==dest) {return;} else {\
+			  while(cur){dcp;} \
+			  setnext='\0'; \
+			}
+
+/* Simple rewriting of the date from BEG's myfrm.c (where isshort is used) */
+void
+tweak(date,isshort)char*date;{
+  int month,tp=0,src=0,dest=0;
+  char time[8];
+
+  if (cursp) {
+    if (cur==next) {
+      if (isshort) {pad;}
+      skip;
+    }
+    pad;
+    skip;
+  }
+  /* Day of week */
+  switch(ADD(cur,next)) {
+    case ADD('S','u'):
+    case ADD('M','o'):
+    case ADD('T','u'):
+    case ADD('W','e'):
+    case ADD('T','h'):
+    case ADD('F','r'):
+    case ADD('S','a'):
+      dcp; dcp;
+      if (curnsp) { skip; } else { finish; }
+      break;
+    default:
+      finish;
+  }
+  if (cursp) { dcp; } else { finish; }
+  /* Month of year */
+  switch(ADD(cur,next)) {
+    case ADD('J','a'):
+      month=1;
+      break;
+    case ADD('F','e'):
+      month=2;
+      break;
+    case ADD('M','a'): /* March or May */
+      if (nnext=='r') {
+	month=3;
+      } else
+      if (nnext=='y') {
+	month=5;
+      } else
+        finish;
+      break;
+    case ADD('A','p'):
+      month=4;
+      break;
+    case ADD('J','u'): /* June or July */
+      if (nnext=='n') {
+	month=6;
+      } else
+      if (nnext=='l') {
+	month=7;
+      } else
+        finish;
+      break;
+    case ADD('A','u'):
+      month=8;
+      break;
+    case ADD('S','e'):
+      month=9;
+      break;
+    case ADD('O','c'):
+      month=10;
+      break;
+    case ADD('N','o'):
+      month=11;
+      break;
+    case ADD('D','e'):
+      month=12;
+      break;
+    default:
+      finish;
+  }
+  if (month>9) {
+    setnext='1';
+    setnext=('0'+month-10);
+    skip; skip;
+  } else {
+    setnext='0';
+    setnext=('0'+month);
+    skip; skip;
+  }
+  /* Third day in month abbr. */
+  if (curnsp) { skip; } else { finish; }
+  /* Skip space in date, and set seperator. */
+  if (cursp) { setnext=datesep; skip; } else { finish; }
+  /* Skip second space in date, if present. */
+  if (cursp) { skip; }
+  /* Day of month */
+  while(curnsp) {dcp;}
+  skip; /* space */
+  /* Time of day (yank) */
+  while((curnsp)&&(tp<8)) {time[tp++]=cur;skip;}
+  if (tp!=8) { finish; }
+  if (cursp) { setnext=datesep; skip; } else { finish; }
+  /* Build in some Y2K problems. Yay! */
+  skip; skip; /* century */
+  dcp; dcp;   /* year    */
+  /* Time of day (put) */
+  setnext=' ';
+  for(tp=0;tp<8;setnext=time[tp++]);
+  /* newline */
+  dcp;
+  /* null */
+  dcp;
+}
+
 
 /*
  * Test to see if the passed string is a ctime(3) generated
@@ -185,6 +336,15 @@ isdate(date)
 	return cmatch(date, ctype_without_secs) || 
 	       cmatch(date, tmztype_without_secs) || 
 	       cmatch(date, ctype) || cmatch(date, tmztype);
+}
+
+/* check for tweak compatible date format */
+int
+isdate_tweak(date)
+	char date[];
+{
+
+	return cmatch(date, ctype);
 }
 
 /*

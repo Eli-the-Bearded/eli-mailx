@@ -227,3 +227,122 @@ run_editor(fp, size, type, readonly)
 out:
 	return nf;
 }
+
+/*
+ * Invoke the alternative reply mail program on a list
+ */
+int
+rnmail(v)
+	void *v;
+{
+	int *msgvec = v;
+	char *tool;
+
+	if ((tool = value("RNMAIL")) == NOSTR) {
+		printf("No RNMAIL tool set.\n");
+		return 0;
+	}
+	return reply1(msgvec, tool);
+}
+
+/*
+ * Reply the message written into a funnily-named file
+ * (which should not exist) and forking the reply tool on it.
+ * We get the tool from the stuff above.
+ */
+int
+reply1(msgvec, tool)
+	int *msgvec;
+	char *tool;
+{
+	register int c;
+	int i;
+	FILE *fp;
+	register struct message *mp;
+	off_t size;
+
+	/*
+	 * Deal with each message to be on the list . . .
+	 */
+	for (i = 0; msgvec[i] && i < msgCount; i++) {
+		sig_t sigint;
+
+		if (i > 0) {
+			char buf[100];
+			char *p;
+
+			printf("Reply to message %d [ynq]? ", msgvec[i]);
+			if (fgets(buf, sizeof buf, stdin) == 0)
+				break;
+			for (p = buf; *p == ' ' || *p == '\t'; p++)
+				;
+			if (*p == 'q')
+				break;
+			if (*p == 'n')
+				continue;
+		}
+		dot = mp = &message[msgvec[i] - 1];
+		touch(mp);
+		sigint = signal(SIGINT, SIG_IGN);
+		fp = run_replytool(setinput(mp), mp->m_size, tool);
+		/* fp not used */
+		(void) signal(SIGINT, sigint);
+	}
+	return 0;
+}
+
+/*
+ * Run an reply tool on the file at "fpp" of "size" bytes,
+ * and return a new file pointer.
+ * Signals must be handled by the caller.
+ */
+FILE *
+run_replytool(fp, size, tool)
+	register FILE *fp;
+	off_t size;
+	char *tool;
+{
+	register FILE *nf = NULL;
+	register int t;
+	struct stat statb;
+	extern char *tempEdit;
+
+	if ((t = open(tempEdit, O_CREAT|O_WRONLY|O_EXCL, 0600)) < 0) {
+		perror(tempEdit);
+		goto out;
+	}
+	if ((nf = Fdopen(t, "w")) == NULL) {
+		perror(tempEdit);
+		(void) unlink(tempEdit);
+		goto out;
+	}
+
+	if (size >= 0)
+		while (--size >= 0 && (t = getc(fp)) != EOF)
+			(void) putc(t, nf);
+	else
+		while ((t = getc(fp)) != EOF)
+			(void) putc(t, nf);
+
+	(void) fflush(nf);
+
+	if (ferror(nf)) {
+		(void) Fclose(nf);
+		perror(tempEdit);
+		(void) unlink(tempEdit);
+		nf = NULL;
+		goto out;
+	}
+	if (Fclose(nf) < 0) {
+		perror(tempEdit);
+		(void) unlink(tempEdit);
+		nf = NULL;
+		goto out;
+	}
+	nf = NULL;
+	run_command(tool, 0, -1, -1, tempEdit, NOSTR, NOSTR);
+
+	(void) unlink(tempEdit);
+out:
+	return nf;
+}

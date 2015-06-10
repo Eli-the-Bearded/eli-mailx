@@ -154,8 +154,8 @@ struct cmd {
 
 struct headline {
 	char	*l_from;	/* The name of the sender */
-	char	*l_tty;		/* His tty string (if any) */
-	char	*l_date;	/* The entire date string */
+	char	*l_tty;		/* The tty string (if any) */
+	char	*l_date;	/* The (possibly shortened) date string */
 };
 
 #define	GTO	1		/* Grab To: line */

@@ -100,8 +100,9 @@ send(mp, obuf, doign, prefix)
 	/* If doign == 0 or if doign is saveignore, then we probably
 	 * are not printing to a pager or terminal, and we don't need
 	 * highlighting.
+	 * highlight and prefix do not go together
 	 */
-	if(doign && (doign != saveignore)) {
+	if(doign && (doign != saveignore) && (prefixlen == 0)) {
 	  dohl = highlight;
 	} else {
 	  dohl = 0;

@@ -180,7 +180,7 @@ printhead(mesg)
 {
 	struct message *mp;
 	char headline[LINESIZE], wcount[LINESIZE], *subjline, dispc, curind;
-	char pbuf[BUFSIZ], *subj7line;
+	char pbuf[BUFSIZ], *subj7line, bytechar;
 	struct headline hl;
 	int subjlen,k,wcl;
 	char *name;
@@ -193,53 +193,71 @@ printhead(mesg)
 	 * Bletch!
 	 */
 	curind = dot == mp ? '>' : ' ';
-	dispc = ' ';
+	dispc = 'r';		/* flag read messages */
 	if (mp->m_flag & MSAVED)
 		dispc = '*';
 	if (mp->m_flag & MPRESERVE)
 		dispc = 'P';
 	if ((mp->m_flag & (MREAD|MNEW)) == MNEW)
-		dispc = 'N';
+		dispc = ' ';	/* don't flag new */
 	if ((mp->m_flag & (MREAD|MNEW)) == 0)
 		dispc = 'U';
 	if (mp->m_flag & MBOX)
 		dispc = 'M';
 	parse(headline, &hl, pbuf);
 
+	subj7line = malloc(LINESIZE);
+	if(!subj7line) {
+	   (void)fprintf(stderr,"\nOut of memory!\n");
+	   exit(2);
+	}
+
+	/* make the "lines/bytes" bit */
+	bytechar = ' ';
 	k = (mp->m_size + 1023) / 1024;
 	if(k < 3500) {
 	  sprintf(wcount, "%4d/%-3d ", mp->m_lines, k);
-	  wcl = strlen(wcount);
-	  subjlen = screenwidth - 50 - wcl;
-	  while(wcount[wcl - 1] == ' ') { wcl --; }
-	  if(wcount[wcl] == ' ') { wcount[wcl] = 'k'; }
+	  bytechar = 'k';
 	} else {
 	  k = (mp->m_size + 1048575) / 1048576;
 	  sprintf(wcount, "%4d/%-3d ", mp->m_lines, k);
-	  wcl = strlen(wcount);
-	  subjlen = screenwidth - 50 - wcl;
-	  while(wcount[wcl - 1] == ' ') { wcl --; }
-	  if(wcount[wcl] == ' ') { wcount[wcl] = 'M'; }
+	  bytechar = 'M';
 	}
+
+	/* paste in the right k/M multiplier, and shorten space
+	 * for subject if wcount went longer than 9 chars
+	 */
+	wcl = strlen(wcount);
+	subjlen = screenwidth - 48 - wcl;
+	while(wcount[wcl - 1] == ' ') { wcl --; }
+	if(wcount[wcl] == ' ') { wcount[wcl] = bytechar; }
 
 	name = value("show-rcpt") != NOSTR ?
 		skin(hfield("to", mp)) : nameof(mp, 0);
 
-	if (subjline == NOSTR || subjlen < 0)		/* pretty pathetic */
-		printf("%c%4d%c%-20.20s %16.16s %s\n",
+	/* no subject or no space for subject */
+	if (subjline == NOSTR || subjlen < 1)
+		/*         current message pointer
+		 *    msg num |            date (17 char)
+		 * msg flag | |  sender email |  message count string
+		 *       \  | |    (20 char)  |  /     (9 char)
+		 *       v  v v       v       v  v                    */
+		printf("%c%4d%c%-20.20s %17.17s %s (no subject)\n",
 			dispc, mesg, curind, name, hl.l_date, wcount);
 	else {
-	        subj7line = malloc(subjlen + 1);
-		if(!subj7line) {
-		   (void)fprintf(stderr,"\nOut of memory!\n");
-		   exit(2);
-		}
 		subj7line[subjlen] = 0;
 		to7strcpy(subj7line, subjline, subjlen);
-		printf("%c%4d%c%-20.20s %16.16s %s \"%.*s\"\n",
+		/*         current message pointer
+		 *    msg num |            date (17 char)
+		 * msg flag | |  sender email |  message count string
+		 *       |  | |    (20 char)  |  /     (9 char)
+		 *       |  | |       |       |  |     
+		 *       v  v v       v       v  v  subject (subjlen char) */
+		printf("%c%4d%c%-20.20s %17.17s %s %.*s\n",
 			dispc, mesg, curind, name, hl.l_date, wcount,
 			subjlen, subj7line);
 	}
+	free(subj7line);
 }
 
 /*

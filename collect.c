@@ -540,7 +540,7 @@ out:
 
 /*
  * Interpolate the named messages into the current
- * message, preceding each line with a tab.
+ * message, preceding each line with tab or indentstr 
  * Return a count of the number of characters now in
  * the message, or -1 if an error is encountered writing
  * the message temporary.  The flag argument is 'm' if we

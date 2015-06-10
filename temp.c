@@ -68,6 +68,7 @@ tinit()
 		tmpdir = _PATH_TMP;
 	}
 
+	/* tempnam() is safe since we use O_EXCL */
 	tempMail  = tempnam (tmpdir, "Rs");
 	tempResid = tempnam (tmpdir, "Rq");
 	tempQuit  = tempnam (tmpdir, "Rm");
