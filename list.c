@@ -302,8 +302,13 @@ number:
 				break;
 			}
 		if (mc == 0) {
-			printf("No applicable messages from {%s",
-				namelist[0]);
+			if(namelist[0][0] == '/') {
+				printf("No applicable messages match {%s",
+					namelist[0]);
+			} else {
+				printf("No applicable messages from {%s",
+					namelist[0]);
+			}
 			for (np = &namelist[1]; *np != NOSTR; np++)
 				printf(", %s", *np);
 			printf("}\n");

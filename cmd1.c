@@ -216,11 +216,11 @@ printhead(mesg)
 	bytechar = ' ';
 	k = (mp->m_size + 1023) / 1024;
 	if(k < 3500) {
-	  sprintf(wcount, "%4d/%-3d ", mp->m_lines, k);
+	  sprintf(wcount, "%4ld/%-3d ", mp->m_lines, k);
 	  bytechar = 'k';
 	} else {
 	  k = (mp->m_size + 1048575) / 1048576;
-	  sprintf(wcount, "%4d/%-3d ", mp->m_lines, k);
+	  sprintf(wcount, "%4ld/%-3d ", mp->m_lines, k);
 	  bytechar = 'M';
 	}
 
@@ -267,7 +267,10 @@ int
 pdot(v)
 	void *v;
 {
-	printf("%d\n", dot - &message[0] + 1);
+	printf("At message %d of %d (%d of those deleted).\n",
+			(int)(dot - &message[0] + 1),
+			msgCount, delCount);
+	 
 	return(0);
 }
 
@@ -390,8 +393,14 @@ type1(msgvec, doign, page)
 		mp = &message[*ip - 1];
 		touch(mp);
 		dot = mp;
-		if (value("quiet") == NOSTR)
-			fprintf(obuf, "Message %d of %d:\n", *ip, msgCount);
+		if (value("quiet") == NOSTR) {
+			if(delCount) {
+				fprintf(obuf, "Message %d of %d (%d of those deleted):\n", 
+					*ip, msgCount, delCount);
+			} else {
+				fprintf(obuf, "Message %d of %d:\n", *ip, msgCount);
+			}
+		}
 		(void) send(mp, obuf, doign ? ignore : 0, NOSTR);
 	}
 close_pipe:
@@ -445,8 +454,12 @@ top(v)
 		mp = &message[*ip - 1];
 		touch(mp);
 		dot = mp;
-		if (value("quiet") == NOSTR)
+		if (value("quiet") == NOSTR) {
+			/* in 'top' use less verbose message count, without
+			 * noting the deleted.
+			 */
 			printf("Message %d of %d:\n", *ip, msgCount);
+		}
 		ibuf = setinput(mp);
 		c = mp->m_lines;
 		if (!lineb)

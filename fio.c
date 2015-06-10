@@ -83,6 +83,7 @@ setptr(ibuf)
 	(void)unlink(linebuf);
 
 	msgCount = 0;
+	delCount = 0;
 	maybe = 1;
 	inhead = 0;
 	offset = 0;

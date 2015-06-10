@@ -27,11 +27,9 @@ export PATH || (echo "OOPS, this isn't sh.  Desperation time.  I will feed mysel
 # System dependencies
 
 mailer="${RNMAILER-/usr/sbin/sendmail}"
-MAILRECORD=$HOME/outmail
+MAILRECORD=/home/bgriffin/outmail
 
 # if you change this to something that does signatures, take out signature code
-
-from='"Your Fancy From" <CHANGEME@example.com>'
 
 # your organization name
 orgname=""
@@ -50,9 +48,7 @@ esac
 n="-n"
 c=""
 
-# bmime produces a MIME attachment template with several headers,
-# like From, that we will suppress (to replace with our own).
-bmime=$HOME/bin/bmime
+bmime=/home/bgriffin/bin/bmime
 perl=/usr/bin/perl
 test=/usr/bin/test
 sed=/usr/bin/sed
@@ -160,7 +156,7 @@ EOH
     esac
 
     $sed -e '/^Reply-To: $/d' > $tmpart <<EOHeader
-From: $from
+From: Benjamin Elijah Griffin <bgriffin@gracenote.com>
 To: $to
 Subject: $title
 Reply-To: $REPLYTO

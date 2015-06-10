@@ -367,6 +367,7 @@ delm(msgvec)
 	for (ip = msgvec; *ip != NULL; ip++) {
 		mp = &message[*ip - 1];
 		touch(mp);
+		delCount ++;
 		mp->m_flag |= MDELETED|MTOUCH;
 		mp->m_flag &= ~(MPRESERVE|MSAVED|MBOX);
 		last = *ip;
@@ -405,6 +406,7 @@ undeletecmd(v)
 	for (ip = msgvec; *ip && ip-msgvec < msgCount; ip++) {
 		mp = &message[*ip - 1];
 		touch(mp);
+		delCount --;
 		dot = mp;
 		mp->m_flag &= ~MDELETED;
 	}

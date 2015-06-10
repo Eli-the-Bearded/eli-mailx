@@ -200,7 +200,7 @@ commands()
 		 */
 		if (!sourcing && value("interactive") != NOSTR) {
 			reset_on_stop = 1;
-			printf(prompt);
+			printf("%s", prompt);
 		}
 		fflush(stdout);
 		sreset();
@@ -361,6 +361,9 @@ execute(linebuf, contxt)
 			printf("No applicable messages\n");
 			break;
 		}
+		if(c > 1) {
+		  printf("Applying \"%s\" to %d messages\n", word, c);
+		}
 		e = (*com->c_func)(msgvec);
 		break;
 
@@ -373,8 +376,11 @@ execute(linebuf, contxt)
 			printf("Illegal use of \"message list\"\n");
 			break;
 		}
-		if (getmsglist(cp, msgvec, com->c_msgflag) < 0)
+		if ((c = getmsglist(cp, msgvec, com->c_msgflag)) < 0)
 			break;
+		if(c > 1) {
+		  printf("Applying \"%s\" to %d messages\n", word, c);
+		}
 		e = (*com->c_func)(msgvec);
 		break;
 

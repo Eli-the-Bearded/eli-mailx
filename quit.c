@@ -440,6 +440,7 @@ edstop()
 	register int gotcha, c;
 	register struct message *mp;
 	FILE *obuf, *ibuf, *readstat = NULL;
+	int obuf_fd;
 	struct stat statb;
 	char tempname[LINESIZE];
 
@@ -472,15 +473,16 @@ edstop()
 
 	sprintf(tempname, "%s/mboxXXXXXX", tmpdir);
 	if (stat(mailname, &statb) >= 0 && statb.st_size > mailsize) {
-		obuf = mkstemp(tempname);
+		obuf_fd = mkstemp(tempname);
 
-		if (obuf == -1) {
+		if (obuf_fd == -1) {
 			perror(tempname);
 			relsesigs();
 			reset(0);
 		}
 		chmod(tempname,0600);
-		ftruncate(tempname,0);
+		ftruncate(obuf_fd,0);
+		obuf = fdopen(obuf_fd, "w");
 
 		if ((ibuf = Fopen(mailname, "r")) == NULL) {
 			perror(mailname);

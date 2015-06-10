@@ -1,0 +1,18 @@
+f <msglist>             show 1-line headers for msglist
+d <msglist>             delete msglist
+s <msglist> FILE        save msglist in file
+h                       show current 1-line headers
+z                       page forward in 1-line headers
+z-                      page backward in 1-line headers
+
+A <message list> consists of integers, ranges of same, subject searches, or
+user names separated by spaces.  If omitted, Mail uses the last message typed.
+A subject search starts with a "/" and ends with whitespace, is not case
+sensitive and searches the whole subject not just the fragment shown.
+
+s me@site1 me@site2 /tmp/mymail         save mail from me in /tmp/mymail
+d /[JUNK] /Quarantine                   delete [JUNK] and quarantine mail
+f /topic user                           list messages for topic or from user
+f '/you did what'			search for "you did what"
+d /head:value                           with searchheaders, delete where Head
+                                        has string "value" in it

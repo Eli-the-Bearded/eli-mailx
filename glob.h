@@ -43,6 +43,7 @@
  */
 
 int	msgCount;			/* Count of messages read in */
+int	delCount;			/* Count of messages since deleted */
 int	rcvmode;			/* True if receiving mail */
 int	sawcom;				/* Set after first command */
 char	*Tflag;				/* -T temp file for netnews */
