@@ -71,10 +71,14 @@
 
 struct message {
 	short	m_flag;			/* flags, see below */
-	short	m_block;		/* block number of this message */
-	short	m_offset;		/* offset in block of message */
+	/* block, offset and lines should not be shorts (as they were
+	/* in the past) since those are too easy to overflow with large
+	/* mail messages.					Elijah
+	 */
+	long	m_block;		/* block number of this message */
+	long	m_offset;		/* offset in block of message */
 	long	m_size;			/* Bytes in the message */
-	short	m_lines;		/* Lines in the message */
+	long	m_lines;		/* Lines in the message */
 };
 
 /*

@@ -121,6 +121,7 @@ next(v)
 			break;
 	if (mp >= &message[msgCount]) {
 		printf("At EOF\n");
+		shown_eof = 1;
 		return(0);
 	}
 	dot = mp;
@@ -309,8 +310,11 @@ deltype(v)
 			return(type(list));
 		}
 		printf("At EOF\n");
-	} else
+		shown_eof = 1;
+	} else {
 		printf("No more messages\n");
+		shown_eof = 1;
+	}
 	return(0);
 }
 

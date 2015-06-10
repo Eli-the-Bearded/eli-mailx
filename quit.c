@@ -65,6 +65,28 @@ quitcmd(v)
 	 */
 	if (sourcing)
 		return 1;
+	if (!shown_eof) {
+	  int n = 0;
+	  char *cp;
+	  char linebuf[LINESIZE];
+
+	  printf("Really quit? [n] ");
+	  fflush(stdout);
+	  if (readline(input, &linebuf[n], LINESIZE) < 0) {
+	    /* EOF */
+            return -1;
+          } else
+	  if ((n = strlen(linebuf)) == 0) {
+	    return 0;
+	  }
+          for (cp = linebuf; isspace(*cp); cp++, n--)
+	  	1;
+	  if ((*cp == 'y') || (*cp == 'Y')) {
+	    return -1;
+	  }
+	  return 0;
+	}
+	  
 	return -1;
 }
 

@@ -92,6 +92,7 @@ headers(v)
 	}
 	if (flag == 0) {
 		printf("No more mail.\n");
+		shown_eof = 1;
 		return(1);
 	}
 	return(0);

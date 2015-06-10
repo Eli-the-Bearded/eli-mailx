@@ -115,6 +115,7 @@ main(argc, argv)
 	bcc = NIL;
 	smopts = NIL;
 	subject = NOSTR;
+	shown_eof = 0;
 	while ((i = getopt(argc, argv, "INT:b:c:dfins:u:v")) != EOF) {
 		switch (i) {
 		case 'T':

@@ -51,6 +51,7 @@ int	edit;				/* Indicates editing a file */
 int	readonly;			/* Will be unable to rewrite file */
 int	noreset;			/* String resets suspended */
 int	sourcing;			/* Currently reading variant file */
+int	shown_eof;			/* flag for having announced end of mail */
 int	loading;			/* Loading user definitions */
 int	cond;				/* Current state of conditional exc. */
 FILE	*itf;				/* Input temp file buffer */
