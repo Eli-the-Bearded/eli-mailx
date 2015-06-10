@@ -1,0 +1,120 @@
+mailx (1:8.1.1-9) frozen unstable; urgency=high
+
+  * recompile without the signal handling workarounds (lo
+     that eliminate critical bugs where message parts can be lost
+     (#20798) and (#20558)
+
+ -- Loic Prylli <lprylli@graville.fdn.fr>  Thu,  9 Apr 1998 02:11:26 +0200
+
+mailx (1:8.1.1-8) frozen unstable; urgency=high
+
+  * previous patch broke most file accesses, corrected safe_open (#20634)
+  * try to check every access to Fopen, change "a" into "w" for new files,
+    to suit behaviour of safe_open.
+
+ -- Loic Prylli <lprylli@graville.fdn.fr>  Sat,  4 Apr 1998 22:01:19 +0200
+
+mailx (1:8.1.1-7) frozen; urgency=medium
+
+  * security fix for tmp races patch from Martin Schulze (#20059)
+
+ -- Loic Prylli <lprylli@graville.fdn.fr>  Mon, 23 Mar 1998 22:52:35 +0100
+
+mailx (1:8.1.1-6) unstable; urgency=low
+
+  * convert to debhelper
+  * changelog now compressed (bug#15431)
+  * removed .orig and .rej from source (bug#18409)
+
+ -- Loic Prylli <lprylli@graville.fdn.fr>  Sat, 14 Feb 1998 14:34:22 +0100
+
+mailx (1:8.1.1-5) unstable; urgency=low
+
+  * apply David Brown patch so mailx choose the right window size 
+     (#12197)
+  * correct Depends: in control file.
+
+ -- Loic Prylli <lprylli@graville.fdn.fr>  Sat, 15 Nov 1997 00:30:38 +0100
+
+mailx (1:8.1.1-4) unstable; urgency=high
+
+  * mailx was sending empty message, ignoring user input
+    add clearerr when EAGAIN occur in "IOSAFE" code (#14263)
+
+ -- Loic Prylli <lprylli@graville.fdn.fr>  Tue, 11 Nov 1997 20:22:35 +0100
+
+mailx (1:8.1.1-3.1) unstable; urgency=low
+
+  * Non-maintainer release.
+  * Libc6 compile. (#11705)
+  * Install missing symlink to manpage. (#7274)
+
+ -- Martin Mitchell <martin@debian.org>  Wed, 29 Oct 1997 04:34:39 +1100
+
+mailx (1:8.1.1-3) unstable; urgency=low
+
+  * add dpkg --assert-working-epoch in preinst bug#6850
+  * add writing of pid in mailbox locking file
+  * fix:mailx was not removing temporary lock files 
+
+ -- Loic Prylli <lprylli@graville.fdn.fr>  Sat, 1 Feb 1997 11:44:04 +0100
+
+mailx (1:8.1.1-2) unstable; urgency=low
+
+  * correct bug #2733 (occur when no space left) dans quit.c
+  * detection of  From_ lines with tring to match the date bug#2010
+  * corrected garble output bug #2284
+
+ -- Loic Prylli <lprylli@graville.fdn.fr>  Sat, 28 Dec 1996 15:02:22 +0100
+
+mailx (1:8.1.1-1) unstable; urgency=medium
+
+  * recreate completely starting from OpenBSD mail version (we loose a lot
+    of extension but we have a working program now)
+  * OpenBSD base version is the last one in december 96
+  * rechange the numbering of version, so epoch 1+8.1 is from 4.4BSD, the
+    last upstream digit is to change each time we update to a new openbsd
+    version.
+  * fix the problem of longjmp inside signals inside stdio calls
+  * reincorporate a patch to be dot file locking+setgid safe
+  * some fix in signal handling
+
+ -- Loic Prylli <lprylli@graville.fdn.fr>  Mon, 23 Dec 1996 01:57:44 +0100
+
+Mon Apr 29 17:21:42 1996  Sven Rudolph <sr1@inf.tu-dresden.de>
+
+	* releasing 8.5.5-1
+
+	* added symlink /usr/bin/Mail -> /usr/bin/mailx 
+
+Thu Apr 25 23:55:36 1996  Sven Rudolph <sr1@inf.tu-dresden.de>
+
+	* set version number to 8.5.5 because it has to superseed 8.1
+
+	* switched back to mailx-5.5-kw (see mailx-5.5-kw.diff.README)
+	  
+	* no POP support
+
+mailx 8.1 Debian 5 - 10/19/95 Sven Rudolph <sr1@inf.tu-dresden.de>
+* uses now BSD signal emulation (/usr/include/bsd/signal.h)
+* added virtual package names in Depends: and Provides fields (Bug#1460)
+* added Section: field
+* created symlink for mailx manpage (Bug#1114)
+
+mailx 8.1 Debian 4 - 5/20/95 Carl Streeter <streeter@cae.wisc.edu>
+* Added diffs from Delman Lee <delman@mipg.upenn.edu>:
+
+   Hi! I got mailx-8.1-3 from the Linux Debian distribution, and have
+   added a "hold-pop" option to hold messages on the POP server after
+   retrieving them. (Also fixed a minor bug with mailx thinking that there
+   is mail even if the POP mailbox is empty. Code around stat() below.)
+
+mailx 8.1 Debian 3 - 4/18/95 Carl Streeter <streeter@cae.wisc.edu>
+* Fixed control file to depend on smail|sendmail.  Updated to latest
+  guidelines
+
+
+
+Local variables:
+mode: debian-changelog
+End:

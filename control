@@ -1,0 +1,13 @@
+Source: mailx
+Section: mail
+Priority: important
+Maintainer: Loic Prylli <lprylli@graville.fdn.fr>
+Standards-Version: 2.1.1.0
+
+Package: mailx
+Architecture: any
+Depends: ${shlibs:Depends}, smail | mail-transport-agent
+Provides: mail-reader
+Description: A simple mail user agent.
+ mailx is the traditional command-line-mode mail user agent.
+ Even if you don't use it it may be required by other programmes.
