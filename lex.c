@@ -362,7 +362,7 @@ execute(linebuf, contxt)
 			break;
 		}
 		if(c > 1) {
-		  printf("Applying \"%s\" to %d messages\n", word, c);
+		  printf("Applying \"%s\" to %d messages\n", com->c_name, c);
 		}
 		e = (*com->c_func)(msgvec);
 		break;
@@ -379,7 +379,7 @@ execute(linebuf, contxt)
 		if ((c = getmsglist(cp, msgvec, com->c_msgflag)) < 0)
 			break;
 		if(c > 1) {
-		  printf("Applying \"%s\" to %d messages\n", word, c);
+		  printf("Applying \"%s\" to %d messages\n", com->c_name, c);
 		}
 		e = (*com->c_func)(msgvec);
 		break;
