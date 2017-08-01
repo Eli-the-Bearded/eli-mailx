@@ -90,9 +90,9 @@ getmsglist(buf, vector, flags)
  * Bit values for colon modifiers.
  */
 
-#define	CMNEW		01		/* New messages */
-#define	CMOLD		02		/* Old messages */
-#define	CMUNREAD	04		/* Unread messages */
+#define	CMNEW		 01		/* New messages */
+#define	CMOLD		 02		/* Old messages */
+#define	CMUNREAD	 04		/* Unread messages */
 #define	CMDELETED	010		/* Deleted messages */
 #define	CMREAD		020		/* Read messages */
 
@@ -275,7 +275,7 @@ number:
 	if (np > namelist) {
 		for (i = 1; i <= msgCount; i++) {
 			for (mc = 0, np = &namelist[0]; *np != NOSTR; np++)
-				if (**np == '/') {
+				if ((**np == '/') || (**np == '%')) {
 					if (matchsubj(*np, i)) {
 						mc++;
 						break;
@@ -302,13 +302,8 @@ number:
 				break;
 			}
 		if (mc == 0) {
-			if(namelist[0][0] == '/') {
-				printf("No applicable messages match {%s",
-					namelist[0]);
-			} else {
-				printf("No applicable messages from {%s",
-					namelist[0]);
-			}
+			printf("No messages matching {%s",
+				namelist[0]);
 			for (np = &namelist[1]; *np != NOSTR; np++)
 				printf(", %s", *np);
 			printf("}\n");
@@ -689,8 +684,12 @@ matchsender(str, mesg)
  * If it does, return true.  The string search argument is assumed to
  * have the form "/search-string."  If it is of the form "/," we use the
  * previous search string.
+ * A search of form '%foo' is just like "/foo" except that it will
+ * act as if searchheaders is set.
  */
 
+#define DEFAULT_MATCH 0
+#define HEADERS_MATCH 1
 char lastscan[128];
 int
 matchsubj(str, mesg)
@@ -699,7 +698,13 @@ matchsubj(str, mesg)
 {
 	register struct message *mp;
 	register char *cp, *cp2, *backup;
+	int stype;
 
+	if(*str == '%') {
+	       stype = HEADERS_MATCH;
+	} else {
+	       stype = DEFAULT_MATCH;
+	}
 	str++;
 	if (strlen(str) == 0) {
 		str = lastscan;
@@ -713,7 +718,7 @@ matchsubj(str, mesg)
 	 * Now look, ignoring case, for the word in the string.
 	 */
 
-	if (value("searchheaders") && (cp = index(str, ':'))) {
+	if ((stype || value("searchheaders")) && (cp = index(str, ':'))) {
 		*cp++ = '\0';
 		cp2 = hfield(str, mp);
 		cp[-1] = ':';
