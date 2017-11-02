@@ -8,9 +8,12 @@ CC=gcc
 #CPPFLAGS=-I/usr/include/bsd -D_BSD_SOURCE -DIOSAFE
 CPPFLAGS=-D_BSD_SOURCE 
 
-# normal:
-CFLAGS=-g
-# profiling: CFLAGS=-pg
+# static build
+#CFLAGS=-g -static
+# profiling build
+#CLFLAGS=-pg
+CFLAGS=-g 
+
 SRCS=	version.c aux.c cmd1.c cmd2.c cmd3.c cmdtab.c collect.c no_dot_lock.c \
 	edit.c fio.c getname.c head.c v7.local.c lex.c list.c main.c names.c \
 	popen.c quit.c send.c strings.c temp.c tty.c vars.c
