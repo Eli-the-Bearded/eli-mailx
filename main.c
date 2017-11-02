@@ -323,4 +323,11 @@ setscreensize()
 		realscreenheight = 24;
 	if ((screenwidth = ws.ws_col) == 0)
 		screenwidth = 80;
+#if 0
+#define SCREEN_RULER "123456789112345678921234567893123456789412345678951234567896123456789712345678981234567899123456789A123456789B"
+
+	/* TESTING narrow, wide, etc screensizes */
+	screenwidth=50;
+	printf("%.*s\n", (screenwidth - 1), SCREEN_RULER);
+#endif
 }

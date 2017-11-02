@@ -284,3 +284,18 @@ struct ignoretab {
 
 /* ctime is broken on SuSE 10. Use ctime_r. */
 #define DONT_TRUST_CTIME
+
+/* what to print in place of a missing Subject: header value */
+#define NO_SUBJECT_PLACEHOLDER "(no subject)"
+
+/* Used for deciding the display strategy when showing message list.
+ * ... very narrow ->59 |60 <- narrow -> 69|70 <- normal ->89|90<- wide ...
+ *
+ * As of 2017 I find myself most often using very narrow (phone) and wide.
+ * And having a screen too narrow to fit any subject was triggering the
+ * no subject placeholder, which then made lines too long again.
+ */ 
+#define VERY_NARROW_SCREEN		(60)
+#define NARROW_SCREEN			(70)
+/* normal */
+#define WIDE_SCREEN			(90)

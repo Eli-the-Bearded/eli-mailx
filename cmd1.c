@@ -182,9 +182,10 @@ printhead(mesg)
 	char headline[LINESIZE], wcount[LINESIZE], *subjline, dispc, curind;
 	char pbuf[BUFSIZ], *subj7line, bytechar;
 	struct headline hl;
-	int subjlen,k,wcl;
+	int subjlen,k,wcl,size_adj;
 	char *name;
 
+	size_adj = 0;
 	mp = &message[mesg-1];
 	(void) readline(setinput(mp), headline, LINESIZE);
 	if ((subjline = hfield("subject", mp)) == NOSTR)
@@ -212,51 +213,141 @@ printhead(mesg)
 	   exit(2);
 	}
 
-	/* make the "lines/bytes" bit */
-	bytechar = ' ';
-	k = (mp->m_size + 1023) / 1024;
-	if(k < 3500) {
-	  sprintf(wcount, "%4ld/%-3d ", mp->m_lines, k);
-	  bytechar = 'k';
+	if (screenwidth < VERY_NARROW_SCREEN) {
+		/* too small, skip message size altogether */
+		wcount[0] = '\0';
+		bytechar = '\0';
+		size_adj = 15;
+	} else if (screenwidth < NARROW_SCREEN) { 
+		/* small, just show lines */
+		sprintf(wcount, "%4ld", mp->m_lines);
+		bytechar = '\0';
+		size_adj = 5;
 	} else {
-	  k = (mp->m_size + 1048575) / 1048576;
-	  sprintf(wcount, "%4ld/%-3d ", mp->m_lines, k);
-	  bytechar = 'M';
+		/* full size or close enough */
+		/* make the "lines/bytes" bit */
+		bytechar = ' ';
+		k = (mp->m_size + 1023) / 1024;
+		if(k < 3500) {
+		  sprintf(wcount, "%4ld/%-3d ", mp->m_lines, k);
+		  bytechar = 'k';
+		} else {
+		  k = (mp->m_size + 1048575) / 1048576;
+		  sprintf(wcount, "%4ld/%-3d ", mp->m_lines, k);
+		  bytechar = 'M';
+		}
+		
+		if(screenwidth >= WIDE_SCREEN) {
+			size_adj = -1;
+		}
 	}
 
 	/* paste in the right k/M multiplier, and shorten space
 	 * for subject if wcount went longer than 9 chars
 	 */
 	wcl = strlen(wcount);
-	subjlen = screenwidth - 48 - wcl;
-	while(wcount[wcl - 1] == ' ') { wcl --; }
-	if(wcount[wcl] == ' ') { wcount[wcl] = bytechar; }
+	subjlen = screenwidth - 48 - wcl + size_adj;
+	/* "Why 48?" I ask myself in 2017. I'm not sure.
+	 * Probably 55 (normal presub width) - 9 (normal wcount width) = 46
+	 * + 2 char fudge for extra wide msg num case == 48
+	 * size_adj is for 2017 screen size adjustments */
+
+	/* put the bytecount char somewhere in wcount, if we have one */
+	if(bytechar) {
+		while(wcount[wcl - 1] == ' ') { wcl --; }
+		if(wcount[wcl] == ' ') { wcount[wcl] = bytechar; }
+	}
 
 	name = value("show-rcpt") != NOSTR ?
 		skin(hfield("to", mp)) : nameof(mp, 0);
 
+	subj7line[subjlen] = 0;
+
 	/* no subject or no space for subject */
 	if (subjline == NOSTR || subjlen < 1)
-		/*         current message pointer
-		 *    msg num |            date (17 char)
-		 * msg flag | |  sender email |  message count string
-		 *       \  | |    (20 char)  |  /     (9 char)
-		 *       v  v v       v       v  v                    */
-		printf("%c%4d%c%-20.20s %17.17s %s (no subject)\n",
-			dispc, mesg, curind, name, hl.l_date, wcount);
+		/* hopefully the placeholder is 7bit already, but... */
+		to7strcpy(subj7line, NO_SUBJECT_PLACEHOLDER, subjlen);
 	else {
-		subj7line[subjlen] = 0;
 		to7strcpy(subj7line, subjline, subjlen);
-		/*         current message pointer
-		 *    msg num |            date (17 char)
-		 * msg flag | |  sender email |  message count string
-		 *       |  | |    (20 char)  |  /     (9 char)
-		 *       |  | |       |       |  |     
-		 *       v  v v       v       v  v  subject (subjlen char) */
-		printf("%c%4d%c%-20.20s %17.17s %s %.*s\n",
-			dispc, mesg, curind, name, hl.l_date, wcount,
+	}
+
+		 
+	/*                current message pointer
+	 *           msg num |             terse date (8 char)
+	 *        msg flag | |  sender email  |
+	 *              |  | |    (15 char)  / 
+	 *              |  | |       |      /  
+	 *              v  v v       v     v    subject (subjlen char) */
+#define VERY_N_HEADER "%c%4d%c%-15.15s %8.8s %.*s\n"
+	/*              ^  ^ ^       ^^    ^
+	 *              1  4 1     15 1    8      = 28 pre-subject  */
+
+	/*                current message pointer
+	 *           msg num |            date (17 char)
+	 *        msg flag | |  sender email |  message count string
+	 *              |  | |    (18 char)  |  /     (4 char)
+	 *              |  | |       |       |  |     
+	 *              v  v v       v       v  v  subject (subjlen char) */
+#define NARROW_HEADER "%c%4d%c%-18.18s %14.14s %s %.*s\n"
+	/*              ^  ^ ^       ^^      ^^ ^^
+	 *              1  4 1     18 1    14 1 4 1= 48 pre-subject  */
+
+	/*                current message pointer
+	 *           msg num |            date (17 char)
+	 *        msg flag | |  sender email |  message count string
+	 *              |  | |    (20 char)  |  /     (9 char)
+	 *              |  | |       |       |  |     
+	 *              v  v v       v       v  v  subject (subjlen char) */
+#define NORMAL_HEADER "%c%4d%c%-20.20s %17.17s %s %.*s\n"
+	/*              ^  ^ ^       ^^      ^^ ^^
+	 *              1  4 1     20 1    17 1 9 1= 55 pre-subject  */
+
+	/*               current message pointer
+	 *          msg num |            date (17 char)
+	 *       msg flag | |  sender email |  message count string
+	 *            |   | |    (20 char)  |  /     (9 char)
+	 *            |   | |       |       |  |     
+	 *            v   v v       v       v  v  subject (subjlen char) */
+#define WIDE_HEADER "%c %4d%c%-20.20s %17.17s %s %.*s\n"
+	/*            ^^  ^ ^       ^^      ^^ ^^
+	 *           1 1  4 1     20 1    17 1 9 1= 56 pre-subject  */
+
+	if(screenwidth >= VERY_NARROW_SCREEN) {
+		/* Narrow, normal, and wide screen all have the same
+		 * columns, but might have different sizes for them. */
+
+		char *use_date;
+
+		if(screenwidth < NARROW_SCREEN) {
+			/* skip leading day of week */
+			use_date = 3 + hl.l_date;
+		} else {
+			use_date = hl.l_date;
+		}
+		printf((screenwidth >= WIDE_SCREEN)?   WIDE_HEADER :(
+		       (screenwidth <  NARROW_SCREEN)? NARROW_HEADER :
+						       NORMAL_HEADER),
+			dispc, mesg, curind, name, use_date, wcount,
+			subjlen, subj7line);
+	} else {
+		/* Very narrow */
+		char tersedate[10];
+		int  cp, wp = 0;
+
+		/* hl.l_date looks like "Da Mm/Dd/Yy Hh:Mm", copy out the
+		 * "Mm/Dd/Yy" bit. */
+		if(strlen(hl.l_date) > 11) {
+			for(cp = 3, wp = 0; cp < 11; cp ++, wp ++) {
+			  tersedate[wp] = hl.l_date[cp];
+			}
+		}
+		tersedate[wp] = '\0';
+                
+		printf(VERY_N_HEADER,
+			dispc, mesg, curind, name, tersedate,
 			subjlen, subj7line);
 	}
+
 	free(subj7line);
 }
 

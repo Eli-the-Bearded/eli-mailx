@@ -124,21 +124,21 @@ parse(line, hl, pbuf)
 	/*
 	 * Skip over "From" first.
 	 * if line started as:
-	 * From bgriffin@gracenote.com  Fri Jul 29 17:50:02 2011
+	 * From username@example.com  Fri Jul 29 17:50:02 2011
 	 */
 	cp = nextword(cp, word);
 	/* word is now "From" and cp is
-	 * bgriffin@gracenote.com  Fri Jul 29 17:50:02 2011
+	 * username@example.com  Fri Jul 29 17:50:02 2011
 	 */
 
 	cp = nextword(cp, word);
-	/* word is now "bgriffin@gracenote.com" and cp is
+	/* word is now "username@example.com" and cp is
 	 * Fri Jul 29 17:50:02 2011
 	 */
 	if (*word)
 		hl->l_from = copyin(word, &sp);
 
-	/* for the rare 
+	/* for the rare
 	 * From username ttyN Date Here
 	 * form from line.
 	 */
@@ -284,8 +284,8 @@ tweak(date,isshort)char*date;{
   if (curnsp) { skip; } else { finish; }
   /* Skip space in date, and set seperator. */
   if (cursp) { setnext=datesep; skip; } else { finish; }
-  /* Skip second space in date, if present. */
-  if (cursp) { skip; }
+  /* deal with space for first digit in date case */
+  if (cursp) { setnext='0'; skip; }
   /* Day of month */
   while(curnsp) {dcp;}
   skip; /* space */
