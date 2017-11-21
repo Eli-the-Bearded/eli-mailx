@@ -367,7 +367,12 @@ delm(msgvec)
 	for (ip = msgvec; *ip != NULL; ip++) {
 		mp = &message[*ip - 1];
 		touch(mp);
-		delCount ++;
+		/* don't double count, now that delete can run on 
+		 * already deleted messages.
+		 */
+		if(!(mp->m_flag & MDELETED)) {
+			delCount ++;
+		}
 		mp->m_flag |= MDELETED|MTOUCH;
 		mp->m_flag &= ~(MPRESERVE|MSAVED|MBOX);
 		last = *ip;

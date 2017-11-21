@@ -51,19 +51,29 @@ static char rcsid[] = "$OpenBSD: cmdtab.c,v 1.6 1996/06/08 19:48:15 christos Exp
  * Define all of the command names and bindings.
  */
 
+/* msgflag: flags required to be present
+ * flag mask: flags that will be examined
+ *             MMNDEL message not deleted
+ *             MMNORM message not deleted or saved
+ * UNLESS argtpe is RAWLIST. Then 
+ *    msgflag: minium number of arguments
+ *    flag mask: maximum number of arguments
+ */
+
 const struct cmd cmdtab[] = {
         /* name         function        argtype         msgflag flag mask */
 	{ "next",	next,		NDMLIST,	0,	MMNDEL },
 	{ "alias",	group,		M|RAWLIST,	0,	1000 },
 	{ "print",	type,		MSGLIST,	0,	MMNDEL },
 	{ "type",	type,		MSGLIST,	0,	MMNDEL },
-	{ "Type",	Type,		MSGLIST,	0,	MMNDEL },
-	{ "Print",	Type,		MSGLIST,	0,	MMNDEL },
+/*	{ "Type",	Type,		MSGLIST,	0,	MMNDEL }, */
+/*	{ "Print",	Type,		MSGLIST,	0,	MMNDEL }, */
 	{ "visual",	visual,		I|MSGLIST,	0,	MMNORM },
 	{ "top",	top,		MSGLIST,	0,	MMNDEL },
 	{ "touch",	stouch,		W|MSGLIST,	0,	MMNDEL },
 	{ "preserve",	preserve,	W|MSGLIST,	0,	MMNDEL },
-	{ "delete",	delete,		W|P|MSGLIST,	0,	MMNDEL },
+/* MDELETED msgflag: Allow me do "delete" a message already deleted. */
+	{ "delete",	delete,		W|P|MSGLIST,	MDELETED,MMNDEL },
 	{ "dp",		deltype,	W|MSGLIST,	0,	MMNDEL },
 	{ "dt",		deltype,	W|MSGLIST,	0,	MMNDEL },
 	{ "undelete",	undeletecmd,	P|MSGLIST,	MDELETED,MMNDEL },
@@ -72,8 +82,8 @@ const struct cmd cmdtab[] = {
 	{ "mbox",	mboxit,		W|MSGLIST,	0,	0 },
 	{ "more",	more,		MSGLIST,	0,	MMNDEL },
 	{ "page",	more,		MSGLIST,	0,	MMNDEL },
-	{ "More",	More,		MSGLIST,	0,	MMNDEL },
-	{ "Page",	More,		MSGLIST,	0,	MMNDEL },
+/*	{ "More",	More,		MSGLIST,	0,	MMNDEL }, */
+/*	{ "Page",	More,		MSGLIST,	0,	MMNDEL }, */
 	{ "unread",	unread,		MSGLIST,	0,	MMNDEL },
 	{ "!",		shell,		I|STRLIST,	0,	0 },
 	{ "copy",	copycmd,	M|STRLIST,	0,	0 },
@@ -97,8 +107,9 @@ const struct cmd cmdtab[] = {
 	{ "headers",	headers,	MSGLIST,	0,	MMNDEL },
 	{ "help",	help,		M|NOLIST,	0,	0 },
 	{ "=",		pdot,		NOLIST,		0,	0 },
+	{ "Rnmail",	rnmail,		R|I|MSGLIST,	0,	MMNDEL },
 	{ "Reply",	Respond,	R|I|MSGLIST,	0,	MMNDEL },
-	{ "Respond",	Respond,	R|I|MSGLIST,	0,	MMNDEL },
+/*	{ "Respond",	Respond,	R|I|MSGLIST,	0,	MMNDEL }, */
 	{ "reply",	respond,	R|I|MSGLIST,	0,	MMNDEL },
 	{ "respond",	respond,	R|I|MSGLIST,	0,	MMNDEL },
 	{ "rnmail",	rnmail,		R|I|MSGLIST,	0,	MMNDEL },
@@ -106,6 +117,7 @@ const struct cmd cmdtab[] = {
 	{ "echo",	echo,		M|RAWLIST,	0,	1000 },
 	{ "quit",	quitcmd,	NOLIST,		0,	0 },
 	{ "list",	pcmdlist,	M|NOLIST,	0,	0 },
+	{ "Xit",	rexit,		M|NOLIST,	0,	0 },
 	{ "xit",	rexit,		M|NOLIST,	0,	0 },
 	{ "exit",	rexit,		M|NOLIST,	0,	0 },
 	{ "size",	messize,	MSGLIST,	0,	MMNDEL },
