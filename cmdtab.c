@@ -72,8 +72,8 @@ const struct cmd cmdtab[] = {
 	{ "top",	top,		MSGLIST,	0,	MMNDEL },
 	{ "touch",	stouch,		W|MSGLIST,	0,	MMNDEL },
 	{ "preserve",	preserve,	W|MSGLIST,	0,	MMNDEL },
-/* MDELETED msgflag: Allow me do "delete" a message already deleted. */
-	{ "delete",	delete,		W|P|MSGLIST,	MDELETED,MMNDEL },
+/* M_ALL: msgflag: Allow me do "delete" a message already deleted. */
+	{ "delete",	delete,		W|P|MSGLIST,	M_ALL,  MMNDEL },
 	{ "dp",		deltype,	W|MSGLIST,	0,	MMNDEL },
 	{ "dt",		deltype,	W|MSGLIST,	0,	MMNDEL },
 	{ "undelete",	undeletecmd,	P|MSGLIST,	MDELETED,MMNDEL },

@@ -70,8 +70,9 @@ getmsglist(buf, vector, flags)
 		*vector = 0;
 		return 0;
 	}
-	if (markall(buf, flags) < 0)
+	if (markall(buf, flags) < 0) {
 		return(-1);
+	}
 	ip = vector;
 	for (mp = &message[0]; mp < &message[msgCount]; mp++)
 		if (mp->m_flag & MMARK)
@@ -85,16 +86,6 @@ getmsglist(buf, vector, flags)
  * line in the message structure.  Return 0 on success, -1
  * on error.
  */
-
-/*
- * Bit values for colon modifiers.
- */
-
-#define	CMNEW		 01		/* New messages */
-#define	CMOLD		 02		/* Old messages */
-#define	CMUNREAD	 04		/* Unread messages */
-#define	CMDELETED	010		/* Deleted messages */
-#define	CMREAD		020		/* Read messages */
 
 /*
  * The following table describes the letters which can follow
@@ -131,7 +122,7 @@ markall(buf, f)
 	valdot = dot - &message[0] + 1;
 	colmod = 0;
 	for (i = 1; i <= msgCount; i++)
-		unmark(i);
+		saveunmark(i);
 	bufp = buf;
 	mc = 0;
 	np = &namelist[0];
@@ -142,6 +133,21 @@ markall(buf, f)
 	beg = 0;
 	while (tok != TEOL) {
 		switch (tok) {
+
+		/* use last matching list
+		 * eg: test a match with "f /something"
+		 *     and if it looks right, operate on it with (eg) "d !"
+                 */
+		case TBANG:
+			if (other) {
+				printf("Can't mix \"*\" or \"!\" with anything\n");
+				return(-1);
+			}
+			other++;
+			for (i = 1; i <= msgCount; i++)
+				usesavemark(i);
+			break;
+
 		case TNUMBER:
 number:
 			if (star) {
@@ -154,7 +160,7 @@ number:
 				if (check(lexnumber, f))
 					return(-1);
 				for (i = beg; i <= lexnumber; i++)
-					if (f == MDELETED || (message[i - 1].m_flag & MDELETED) == 0)
+					if (f == MDELETED || f == M_ALL || (message[i - 1].m_flag & MDELETED) == 0)
 						mark(i);
 				beg = 0;
 				break;
@@ -229,10 +235,11 @@ number:
 
 		case TSTAR:
 			if (other) {
-				printf("Can't mix \"*\" with anything\n");
+				printf("Can't mix \"*\" or \"!\" with anything\n");
 				return(-1);
 			}
 			star++;
+			other++;
 			break;
 
 		case TERROR:
@@ -245,7 +252,7 @@ number:
 	mc = 0;
 	if (star) {
 		for (i = 0; i < msgCount; i++)
-			if ((message[i].m_flag & MDELETED) == f) {
+			if (f == M_ALL || (message[i].m_flag & MDELETED) == f) {
 				mark(i+1);
 				mc++;
 			}
@@ -264,7 +271,7 @@ number:
 
 	if ((np > namelist || colmod != 0) && mc == 0)
 		for (i = 1; i <= msgCount; i++)
-			if ((message[i-1].m_flag & MDELETED) == f)
+			if (f == M_ALL || (message[i-1].m_flag & MDELETED) == f)
 				mark(i);
 
 	/*
@@ -502,6 +509,7 @@ struct lex {
 	{ '+',	TPLUS },
 	{ '(',	TOPEN },
 	{ ')',	TCLOSE },
+	{ '!',	TBANG },
 	{ 0,	0 }
 };
 
@@ -769,6 +777,41 @@ unmark(mesg)
 	if (i < 1 || i > msgCount)
 		panic("Bad message number to unmark");
 	message[i-1].m_flag &= ~MMARK;
+}
+
+/*
+ * Restore saved marks.
+ */
+void
+usesavemark(mesg)
+	int mesg;
+{
+	register int i;
+
+	i = mesg;
+	if (i < 1 || i > msgCount)
+		panic("Bad message number to usesavemark");
+        if (message[i-1].m_flag & MLASTMARK) 
+		message[i-1].m_flag |= MMARK;
+}
+
+/*
+ * Unmark the named message, but save the mark.
+ */
+void
+saveunmark(mesg)
+	int mesg;
+{
+	register int i;
+	int for_history;
+
+	i = mesg;
+	if (i < 1 || i > msgCount)
+		panic("Bad message number to saveunmark");
+        for_history = message[i-1].m_flag & MMARK;
+	message[i-1].m_flag &= ~(MMARK|MLASTMARK);
+	if (for_history) 
+		message[i-1].m_flag |= MLASTMARK;
 }
 
 /*

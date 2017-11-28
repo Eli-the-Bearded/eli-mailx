@@ -82,7 +82,7 @@ struct message {
 };
 
 /*
- * flag bits.
+ * flag bits: type short
  */
 
 #define	MUSED		(1<<0)		/* entry is used, but this bit isn't */
@@ -96,6 +96,7 @@ struct message {
 #define	MREAD		(1<<8)		/* message has been read sometime. */
 #define	MSTATUS		(1<<9)		/* message status has changed */
 #define	MBOX		(1<<10)		/* Send this to mbox, regardless */
+#define	MLASTMARK	(1<<11)		/* Message mark history */
 
 /*
  * Given a file address, determine the block number it represents.
@@ -252,6 +253,7 @@ struct ignoretab {
 #define	TCLOSE	9			/* A ')' */
 #define TPLUS	10			/* A '+' */
 #define TERROR	11			/* A lexical error */
+#define TBANG	12			/* A '!' */
 
 #define	REGDEP	2			/* Maximum regret depth. */
 #define	STRINGLEN	1024		/* Maximum length of string token */
@@ -299,3 +301,17 @@ struct ignoretab {
 #define NARROW_SCREEN			(70)
 /* normal */
 #define WIDE_SCREEN			(90)
+
+/* Originalling in list.c, but I wanted M_ALL in cmdtab.c, too. */
+/*
+ * Bit values for colon modifiers.
+ */
+
+#define	CMNEW		 01		/* New messages */
+#define	CMOLD		 02		/* Old messages */
+#define	CMUNREAD	 04		/* Unread messages */
+#define	CMDELETED	010		/* Deleted messages */
+#define	CMREAD		020		/* Read messages */
+#define M_ALL           037		/* All possible messages */
+
+
