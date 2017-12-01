@@ -390,6 +390,8 @@ set(v)
 	register struct var *vp;
 	register char *cp, *cp2;
 	char varbuf[BUFSIZ], **ap, **p;
+	char shellout[BUFSIZ], fmt[BUFSIZ];
+	int bterr, space = 1;
 	int errs, h, s;
 
 	if (*arglist == NOSTR) {
@@ -398,12 +400,19 @@ set(v)
 				s++;
 		ap = (char **) salloc(s * sizeof *ap);
 		for (h = 0, p = ap; h < HSHSIZE; h++)
-			for (vp = variables[h]; vp != NOVAR; vp = vp->v_link)
+			for (vp = variables[h]; vp != NOVAR; vp = vp->v_link) {
+				int slen = strlen(vp->v_name);
+				if (slen > space) space = slen;
 				*p++ = vp->v_name;
+			}
 		*p = NOSTR;
 		sort(ap);
+		/* nicely formatted */
+		sprintf(fmt, "%%%d-s = %%s\n", space);
 		for (p = ap; *p != NOSTR; p++)
-			printf("%s\t%s\n", *p, value(*p));
+			printf(fmt, *p, value(*p));
+		/* if highlighting was turned on, make sure it is off now */
+		endhl(stdout);
 		return(0);
 	}
 	errs = 0;
@@ -422,7 +431,37 @@ set(v)
 			errs++;
 			continue;
 		}
-		assign(varbuf, cp);
+
+		if(*cp == '`') {
+			char *endp = ++cp;
+			int done = 0;
+			while(*endp != '\0') {
+			  if(*endp == '`') {
+			    *endp = '\0';
+			    done = 1;
+			    break;
+			  }
+			  endp++;
+			}
+
+			if(!done) {
+				printf("Unmatched backtick\n");
+				errs++;
+				continue;
+			} 
+
+			shellout[0] = '\0';
+			bterr = backtick(cp, shellout, BUFSIZ);
+
+			if(bterr) {
+				printf("Backtick error\n");
+				errs++;
+				continue;
+			}
+			assign(varbuf, shellout);
+		} else {
+			assign(varbuf, cp);
+		}
 	}
 	return(errs);
 }
@@ -584,19 +623,25 @@ file(v)
 }
 
 /*
- * Expand file names like echo
+ * Show variables or expand file names like echo
  */
 int
 echo(v)
 	void *v;
 {
 	char **argv = v;
-	register char **ap;
-	register char *cp;
+	char **ap;
+	char *cp;
+	char *vp;
 
 	for (ap = argv; *ap != NOSTR; ap++) {
 		cp = *ap;
-		if ((cp = expand(cp)) != NOSTR) {
+    		if ((vp = value(cp)) != NOSTR) {
+			if (ap != argv)
+				putchar(' ');
+			printf("%s", vp);
+		}
+		else if ((cp = expand(cp)) != NOSTR) {
 			if (ap != argv)
 				putchar(' ');
 			printf("%s", cp);
@@ -671,10 +716,33 @@ ifcmd(v)
 	cond = CANY;
 	cp = argv[0];
 	switch (*cp) {
+
+	/* if etbmail
+	 *	stuff nail will ignore
+	 * endif
+	 * The else command is unusable for this case, since nail does not
+         * recognize the condition.
+         */
+	case 'e': case 'E':
+		cond = CANY;
+		break;
+
+	/* if reading
+	 *	read mode options
+	 * else
+	 *      ...
+	 * endif
+         */
 	case 'r': case 'R':
 		cond = CRCV;
 		break;
 
+	/* if sending
+	 *	send mode options
+	 * else
+	 *      ...
+	 * endif
+         */
 	case 's': case 'S':
 		cond = CSEND;
 		break;
@@ -697,7 +765,8 @@ elsecmd(v)
 
 	switch (cond) {
 	case CANY:
-		printf("\"Else\" without matching \"if\"\n");
+		/* no 'if' at all or 'if etbmail' */
+		printf("\"Else\" outside of suitable \"if\"\n");
 		return(1);
 
 	case CSEND:
@@ -724,10 +793,7 @@ endifcmd(v)
 	void *v;
 {
 
-	if (cond == CANY) {
-		printf("\"Endif\" without matching \"if\"\n");
-		return(1);
-	}
+	/* used to error out on cond == CANY, but accept that now. */
 	cond = CANY;
 	return(0);
 }

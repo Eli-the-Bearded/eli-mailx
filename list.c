@@ -424,9 +424,13 @@ getrawlist(line, argv, argc)
 		while ((c = *cp) != '\0') {
 			cp++;
 			if (quotec != '\0') {
-				if (c == quotec)
+				if (c == quotec) {
+					/* need to copy the close backtick */
+					if(c == '`') {
+						*cp2++ = c;
+					}
 					quotec = '\0';
-				else if (c == '\\')
+				} else if (c == '\\') {
 					switch (c = *cp++) {
 					case '\0':
 						*cp2++ = '\\';
@@ -462,7 +466,7 @@ getrawlist(line, argv, argc)
 					default:
 						*cp2++ = c;
 					}
-				else if (c == '^') {
+				} else if (c == '^') {
 					c = *cp++;
 					if (c == '?')
 						*cp2++ = '\177';
@@ -476,6 +480,10 @@ getrawlist(line, argv, argc)
 					}
 				} else
 					*cp2++ = c;
+			} else if (c == '`') {
+				/* backticks are only expanded in set() */
+				*cp2++ = c;
+				quotec = c;
 			} else if (c == '"' || c == '\'')
 				quotec = c;
 			else if (c == ' ' || c == '\t')

@@ -97,6 +97,7 @@ int	 anyof __P((char *, char *));
 int	 append __P((struct message *, FILE *));
 int	 argcount __P((char **));
 void	 assign __P((char [], char []));
+int	 backtick __P((char *, char *, int));
 int	 bangexp __P((char *, int));
 int	 blankline __P((char []));
 void	 brokpipe __P((int));

@@ -51,6 +51,9 @@
 #ifndef _PATH_CSHELL
 #define _PATH_CSHELL	"/bin/csh"
 #endif
+#ifndef _PATH_BSHELL
+#define _PATH_BSHELL	"/bin/sh"
+#endif
 #ifndef _PATH_MORE
 /* less is safer than more since it escapes control characters */
 #define _PATH_MORE	"/usr/bin/less"
