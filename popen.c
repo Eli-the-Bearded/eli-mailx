@@ -191,6 +191,36 @@ Pclose(ptr)
 	return i;
 }
 
+/*
+ * Read a line up siz long from the specified command into the command
+ * buffer. Do not include the newline at the end. Return 0 on
+ * success.
+ */
+int
+backtick(char *str, char *cmdbuf, int siz)
+{
+        char *shell;
+	FILE *ibuf;
+        char cmd[BUFSIZ];
+	int rdlen;
+
+	*cmdbuf = '\0';
+        (void) strncpy(cmd, str, BUFSIZ);
+        cmd[BUFSIZ-1]='\0';
+
+        ibuf = Popen(cmd, "r");
+
+	/* if length read is negative, there was an error */
+        rdlen = readline(ibuf, cmdbuf, siz);
+
+	/* ignore any pipe errors during close */
+	signal(SIGPIPE, SIG_IGN);
+	Pclose(ibuf);
+	signal(SIGPIPE, SIG_DFL);
+
+        return (rdlen >= 0)? 0 : 1;
+}
+
 void
 close_all_files()
 {
