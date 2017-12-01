@@ -65,9 +65,9 @@ const struct cmd cmdtab[] = {
 	{ "next",	next,		NDMLIST,	0,	MMNDEL },
 	{ "alias",	group,		M|RAWLIST,	0,	1000 },
 	{ "print",	type,		MSGLIST,	0,	MMNDEL },
-	{ "type",	type,		MSGLIST,	0,	MMNDEL },
+/*	{ "type",	type,		MSGLIST,	0,	MMNDEL }, */
 /*	{ "Type",	Type,		MSGLIST,	0,	MMNDEL }, */
-/*	{ "Print",	Type,		MSGLIST,	0,	MMNDEL }, */
+	{ "Print",	Type,		MSGLIST,	0,	MMNDEL }, 
 	{ "visual",	visual,		I|MSGLIST,	0,	MMNORM },
 	{ "top",	top,		MSGLIST,	0,	MMNDEL },
 	{ "touch",	stouch,		W|MSGLIST,	0,	MMNDEL },
@@ -81,10 +81,11 @@ const struct cmd cmdtab[] = {
 	{ "mail",	sendmail,	R|M|I|STRLIST,	0,	0 },
 	{ "mbox",	mboxit,		W|MSGLIST,	0,	0 },
 	{ "more",	more,		MSGLIST,	0,	MMNDEL },
-	{ "page",	more,		MSGLIST,	0,	MMNDEL },
-/*	{ "More",	More,		MSGLIST,	0,	MMNDEL }, */
+/*	{ "page",	more,		MSGLIST,	0,	MMNDEL },
+	{ "More",	More,		MSGLIST,	0,	MMNDEL }, 
 /*	{ "Page",	More,		MSGLIST,	0,	MMNDEL }, */
 	{ "unread",	unread,		MSGLIST,	0,	MMNDEL },
+	{ "Unread",	unread,		MSGLIST,	0,	MMNDEL },
 	{ "!",		shell,		I|STRLIST,	0,	0 },
 	{ "copy",	copycmd,	M|STRLIST,	0,	0 },
 	{ "Copy",	copycmdvar,	M|STRLIST,	0,	0 },
@@ -111,7 +112,7 @@ const struct cmd cmdtab[] = {
 	{ "Reply",	Respond,	R|I|MSGLIST,	0,	MMNDEL },
 /*	{ "Respond",	Respond,	R|I|MSGLIST,	0,	MMNDEL }, */
 	{ "reply",	respond,	R|I|MSGLIST,	0,	MMNDEL },
-	{ "respond",	respond,	R|I|MSGLIST,	0,	MMNDEL },
+/*	{ "respond",	respond,	R|I|MSGLIST,	0,	MMNDEL }, */
 	{ "rnmail",	rnmail,		R|I|MSGLIST,	0,	MMNDEL },
 	{ "edit",	editor,		I|MSGLIST,	0,	MMNORM },
 	{ "echo",	echo,		M|RAWLIST,	0,	1000 },

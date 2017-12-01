@@ -149,29 +149,30 @@ simple numbers.
 .Pp
 .Ss Disposing of mail.
 After examining a message you can
-.Ic delete
-.Ql Ic d )
+.Ic delete 
+.Pq Ic d
 the message or
 .Ic reply
-.Ql Ic r )
+.Pq Ic r
 to it.
 Deletion causes the
 .Nm mail
 program to forget about the message.
 This is not irreversible; the message can be
 .Ic undeleted
-.Ql Ic u )
+.Pq Ic und
 by giving its number, or the
 .Nm mail
 session can be aborted by giving the
 .Ic exit
-.Ql Ic x )
+.Pq Ic x
 command.
 Deleted messages will, however, usually disappear never to be seen again.
 .Pp
 .Ss Specifying messages
 Commands such as
-.Ic print
+.Ic print ,
+.Ic from ,
 and
 .Ic delete
 can be given a list of message numbers as arguments to apply
@@ -181,23 +182,45 @@ Thus
 deletes messages 1 and 2, while
 .Dq Li delete 1\-5
 deletes messages 1 through 5.
+Similarly search terms can be used. Show a one line summary of messages
+from john:
+.Dq Li from john
+Or messages with IMPORTANT in the subject:
+.Dq Li from /IMPORTANT
+(use quotes starting before the 
+.Ql Li \&/
+if the search string has spaces).
 The special name
 .Ql Li \&*
-addresses all messages, and
+addresses all messages,
+.Ql Li \&!
+reuses the previous specified set, and
 .Ql Li \&$
 addresses
 the last message; thus the command
 .Ic top
 which prints the first few lines of a message could be used in
-.Dq Li top \&*
-to print the first few lines of all messages.
+.Dq Li top \&!
+to print the first few lines of all messages of the previous
+.Dq Li from '%to:mail list'
+search.
 .Pp
 .Ss Replying to or originating mail.
 You can use the
+.Ic rnmail
+command to invoke an external mailer to reply to a message. The mailer
+is defined by variable
+.Em RNMAIL
+and is assumed to work like the 
+.Xr Rnmail
+program included with the
+.Xr trn
+newsreader.
+You mail also use the
 .Ic reply
 command to
-set up a response to a message, sending it back to the
-person who it was from.
+compose a response to a message using the internal mailer,
+sending it back to the person who it was from.
 Text you then type in, up to an end-of-file,
 defines the contents of the message.
 While you are composing a message,
@@ -223,7 +246,7 @@ You can end a
 .Nm mail
 session with the
 .Ic quit
-.Ql Ic q )
+.Pq Ic q 
 command.
 Messages which have been examined go to your
 .Ar mbox
@@ -238,7 +261,8 @@ It is also possible to create a personal distribution lists so that,
 for instance, you can send mail to
 .Dq Li cohorts
 and have it go
-to a group of people.
+to a group of people. Note that these do not work with
+the external mailer program.
 Such lists can be defined by placing a line like
 .Pp
 .Dl alias cohorts bill ozalp jkf mark kridle@ucbcory
@@ -334,11 +358,12 @@ and
 Reply to originator.
 Does not reply to other
 recipients of the original message.
-.It Ic Type
-.Pq Ic T
-Identical to the
-.Ic Print
-command.
+.It Ic Rnmail
+.Pq Ic Rn
+replies to a message using an external mailer set in the
+.Em RNMAIL
+variable. The mailer will be invoked with a filename containing
+the message to be replied to and is expected to send mail itself.
 .It Ic alias
 .Pq Ic a
 With no arguments, prints out all currently-defined aliases.
@@ -398,11 +423,17 @@ If there is no next message,
 .Nm mail
 says
 .Dq Li "at EOF" .
+.It Ic echo
+.Pq Ic ec
+Does variable and tilde expansion of arguments. Useful to show 
+specific variable values.
 .It Ic edit
 .Pq Ic e
 Takes a list of messages and points the text editor at each one in
 turn.
-On return from the editor, the message is read back in.
+On return from the editor, the message is read back in. See
+.Ic visual
+for a fullscreen version.
 .It Ic exit
 .Pf ( Ic ex
 or
@@ -439,7 +470,9 @@ file, and
 directory.
 .It Ic from
 .Pq Ic f
-Takes a list of messages and prints their message headers.
+Takes a list of messages and prints the one line message summary, in
+the normal index format. Use with search patterns to find particular
+message numbers.
 .It Ic headers
 .Pq Ic h
 Lists the current range of headers, which is an 18\-message group.
@@ -464,6 +497,22 @@ user's system mailbox instead of in
 Does not override the
 .Ic delete
 command.
+.It Ic if...else...endif
+Can be used only evaluate commands in certain contexts. Intended for 
+use in 
+.Dq Pa ~/.mailrc
+there are three recognized conditions.
+.Ar if reading
+for reading mode;
+.Ar if sending
+when invoked to compose mail directly; and
+.Ar if elimail
+used to hide configuration from incompatable programs that might
+also read
+.Dq Pa ~/.mailrc .
+The last form cannot be used with 
+.Ar else
+as those other programs will not understand the statement.
 .It Ic ignore
 Add the list of header fields named to the
 .Ar ignored list .
@@ -473,10 +522,8 @@ This
 command is very handy for suppression of certain machine-generated
 header fields.
 The
-.Ic Type
-and
 .Ic Print
-commands can be used to print a message in its entirety, including
+command can be used to print a message in its entirety, including
 ignored fields.
 If
 .Ic ignore
@@ -490,6 +537,11 @@ Header fields in the highlighted list are printed with
 in front and 
 .Ar endhlstr
 after for the various type and print commands.
+.It Ic list
+Shows all available commands in search order. For an abbreviation
+.Ar short ,
+the first command in the list starting with "short"
+is the one that will be used.
 .It Ic mail
 .Pq Ic m
 Takes as argument login names and distribution group names and sends
@@ -548,9 +600,6 @@ command.
 Takes a message list and sends mail to the sender and all
 recipients of the specified message.
 The default message must not be deleted.
-.It Ic respond
-A synonym for
-.Ic reply  .
 .It Ic retain
 Add the list of header fields named to the
 .Ar retained list
@@ -566,6 +615,9 @@ If
 .Ic retain
 is executed with no arguments, it lists the current set of
 retained fields.
+.It Ic rnmail
+A synonym for
+.Ic Rnmail  .
 .It Ic save
 .Pq Ic s
 Takes a message list and a filename and appends each message in
@@ -589,6 +641,13 @@ Arguments are of the form
 Quotation marks may be placed around any part of the assignment statement to
 quote blanks or tabs, i.e.
 .Dq Li "set indentprefix=\*q->\*q"
+Inside quotes, 
+.Ic \&^x
+can be used to include control characters. With
+.Ic \&`
+backtick quotes
+.Ic \&`
+the expression will be evaluated as a command.
 .It Ic saveignore
 .Ic Saveignore
 is to
@@ -639,10 +698,9 @@ The number of
 lines printed is controlled by the variable
 .Ic toplines
 and defaults to five.
-.It Ic type
-.Pq Ic t
-A synonym for
-.Ic print  .
+.It Ic touch
+.Pq Ic tou
+Consider the message(s) to be read.
 .It Ic unalias
 Takes a list of names defined by
 .Ic alias
@@ -855,6 +913,10 @@ causes
 .Nm mail
 to interpret a period alone on a line as the terminator
 of a message you are sending.
+.It Ar endhlstr
+A suffix to be displayed after headers in the 
+.Ic highlight 
+list.
 .It Ar hold
 This option is used to hold messages in the system mailbox
 by default.
@@ -901,12 +963,21 @@ Reverses the sense of
 and
 .Ic Reply
 commands.
+.It Ar RNMAIL
+Holds the name of the external mailer for the
+.Ic Rnmail
+command.
 .It Ar quiet
 Suppresses the printing of the version when first invoked.
 .It Ar searchheaders
 If this option is set, then a message-list specifier in the form ``/x:y''
 will expand to all messages containing the substring ``y'' in the header
-field ``x''.  The string search is case insensitive.
+field ``x''.  The string search is case insensitive. Regardless of this
+setting, ``%x:y'' will search in this fastion.
+.It Ar starthlstr
+A prefix to be displayed before headers in the 
+.Ic highlight 
+list.
 .It Ar verbose
 Setting the option
 .Ar verbose
@@ -1024,6 +1095,8 @@ Help files.
 System initialization file.
 .El
 .Sh SEE ALSO
+.Xr Rnmail 1 ,
+.Xr trn 1 ,
 .Xr fmt 1 ,
 .Xr newaliases 1 ,
 .Xr vacation 1 ,
