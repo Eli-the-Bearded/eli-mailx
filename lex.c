@@ -173,7 +173,8 @@ int	reset_on_stop;			/* do a reset() if stopped */
  * print no prompt.
  */
 void
-commands()
+commands(cmdline)
+char* cmdline;
 {
 	int eofloop = 0;
 	register int n;
@@ -194,6 +195,11 @@ commands()
 	}
 	setexit();
 	for (;;) {
+		if((cmdline != NULL) && *cmdline) {
+			if (execute(cmdline, 0))
+				break;
+			cmdline[0] = '\0';
+		}
 		/*
 		 * Print the prompt, if needed.  Clear out
 		 * string space, and flush the output.
@@ -681,7 +687,7 @@ load(name)
 	input = in;
 	loading = 1;
 	sourcing = 1;
-	commands();
+	commands(NULL);
 	loading = 0;
 	sourcing = 0;
 	input = oldin;

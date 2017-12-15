@@ -51,6 +51,7 @@
 .Op Ar name
 .Nm mail
 .Op Fl iInNv
+.Op Fl e Ar command
 .Op Fl u Ar user
 .Sh INTRODUCTION
 .Nm Mail
@@ -98,6 +99,10 @@ of users.
 Send blind carbon copies to
 .Ar list .
 List should be a comma-separated list of names.
+.It Fl e
+When reading mail, execute the
+.Ar command
+as if it were the first interactive input.
 .It Fl f
 Read in the contents of your
 .Ar mbox

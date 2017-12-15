@@ -110,7 +110,7 @@ int	 cmatch __P((char *, char *));
 void	 collhup __P((int));
 void	 collint __P((int));
 void	 collstop __P((int));
-void	 commands __P((void));
+void	 commands __P((char *));
 int	 copycmd __P((void *));
 int	 copycmdvar __P((void *));
 int	 core __P((void *));

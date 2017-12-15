@@ -578,7 +578,8 @@ stouch(v)
 
 	for (ip = msgvec; *ip != 0; ip++) {
 		dot = &message[*ip-1];
-		dot->m_flag |= MTOUCH;
+		/* the touch() used by type1() */
+		touch(dot);
 		dot->m_flag &= ~MPRESERVE;
 	}
 	return(0);

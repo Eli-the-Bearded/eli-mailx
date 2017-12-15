@@ -76,6 +76,7 @@ main(argc, argv)
 	struct name *to, *cc, *bcc, *smopts;
 	char *subject;
 	char *ef;
+	char *cmdoption;
 	char nosrc = 0;
 	sig_t prevint;
 
@@ -113,10 +114,11 @@ main(argc, argv)
 	to = NIL;
 	cc = NIL;
 	bcc = NIL;
+	cmdoption = NULL;
 	smopts = NIL;
 	subject = NOSTR;
 	shown_eof = 0;
-	while ((i = getopt(argc, argv, "INT:b:c:dfins:u:v")) != EOF) {
+	while ((i = getopt(argc, argv, "INT:b:c:dfins:u:ve:")) != EOF) {
 		switch (i) {
 		case 'T':
 			/*
@@ -129,6 +131,12 @@ main(argc, argv)
 				exit(1);
 			}
 			close(i);
+			break;
+		case 'e':
+			/*
+			 * Next argument is first command to run.
+			 */
+			cmdoption = optarg;
 			break;
 		case 'u':
 			/*
@@ -208,8 +216,8 @@ main(argc, argv)
 			fputs("\
 Usage: mail [-iInv] [-s subject] [-c cc-addr] [-b bcc-addr] to-addr ...\n\
             [- sendmail-options ...]\n\
-       mail [-iInNv] -f [name]\n\
-       mail [-iInNv] [-u user]\n",
+       mail [-iInNv] [-e command] -f [name]\n\
+       mail [-iInNv] [-e command] [-u user]\n",
 				stderr);
 			exit(1);
 		}
@@ -269,7 +277,7 @@ Usage: mail [-iInv] [-s subject] [-c cc-addr] [-b bcc-addr] to-addr ...\n\
 		fflush(stdout);
 		signal(SIGINT, prevint);
 	}
-	commands();
+	commands(cmdoption);
 	signal(SIGHUP, SIG_IGN);
 	signal(SIGINT, SIG_IGN);
 	signal(SIGQUIT, SIG_IGN);

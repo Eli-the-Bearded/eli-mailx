@@ -138,6 +138,9 @@ touch(mp)
 /*
  * Echo a generic highlight sequence. No terminal type checking.
  * Cheesy, but no need to link to curses either. 		BEG
+ * But backticks are now allowed in set assignments, so you can
+ * set starthlstr=`tput smso`
+ * set endhlstr=`tput rmso`					BEG 2017
  */
 void
 starthl(strm)
