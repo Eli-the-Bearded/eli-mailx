@@ -839,7 +839,7 @@ metamess(meta, f)
 		 * First 'good' message left.
 		 */
 		for (mp = &message[0]; mp < &message[msgCount]; mp++)
-			if ((mp->m_flag & MDELETED) == f)
+			if ((f == M_ALL) || (mp->m_flag & MDELETED) == f)
 				return(mp - &message[0] + 1);
 		printf("No applicable messages\n");
 		return(-1);
@@ -849,7 +849,7 @@ metamess(meta, f)
 		 * Last 'good message left.
 		 */
 		for (mp = &message[msgCount-1]; mp >= &message[0]; mp--)
-			if ((mp->m_flag & MDELETED) == f)
+			if ((f == M_ALL) || (mp->m_flag & MDELETED) == f)
 				return(mp - &message[0] + 1);
 		printf("No applicable messages\n");
 		return(-1);
@@ -859,7 +859,7 @@ metamess(meta, f)
 		 * Current message.
 		 */
 		m = dot - &message[0] + 1;
-		if ((dot->m_flag & MDELETED) != f) {
+		if ((f == M_ALL) || (dot->m_flag & MDELETED) != f) {
 			printf("%d: Inappropriate message\n", m);
 			return(-1);
 		}
