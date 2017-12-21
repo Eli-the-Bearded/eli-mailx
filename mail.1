@@ -115,6 +115,9 @@ writes undeleted messages back to this file.
 Is equivalent to:
 .Pp
 .Dl mail -f /var/spool/mail/user
+(but is overridden if the environment variable
+.Em MAIL
+is set).
 .El
 .Ss Sending mail
 To send a message to one or more people,
