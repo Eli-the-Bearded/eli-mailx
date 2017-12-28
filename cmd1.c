@@ -227,13 +227,17 @@ printhead(mesg)
 		/* full size or close enough */
 		/* make the "lines/bytes" bit */
 		bytechar = ' ';
-		k = (mp->m_size + 1023) / 1024;
+		k = TO_KILO(mp->m_size);
 		if(k < 3500) {
-		  sprintf(wcount, "%4ld/%-3d ", mp->m_lines, k);
+		  if(mp->m_lines > 9999) {
+			  sprintf(wcount, "%3ldc/%-3d ", TO_CENT(mp->m_lines), k);
+		  } else {
+			  sprintf(wcount, "%4ld/%-3d ", mp->m_lines, k);
+		  }
 		  bytechar = 'k';
 		} else {
-		  k = (mp->m_size + 1048575) / 1048576;
-		  sprintf(wcount, "%4ld/%-3d ", mp->m_lines, k);
+		  k = TO_MEGA(mp->m_size);
+		  sprintf(wcount, "%3ldc/%-3d ", TO_CENT(mp->m_lines), k);
 		  bytechar = 'M';
 		}
 		

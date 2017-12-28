@@ -65,6 +65,8 @@ char	*homedir;			/* Path name of home directory */
 char	*myname;			/* My login name */
 off_t	mailsize;			/* Size of system mailbox */
 int	lexnumber;			/* Number of TNUMBER from scan() */
+int	lexsizecheck;			/* Number with sizecheck from scan() */
+int	lexsizeflag;			/* Flags with sizecheck from scan() */
 char	lexstring[STRINGLEN];		/* String from TSTRING, scan() */
 int	regretp;			/* Pointer to TOS of regret tokens */
 int	regretstack[REGDEP];		/* Stack of regretted tokens */

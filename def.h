@@ -254,6 +254,9 @@ struct ignoretab {
 #define TPLUS	10			/* A '+' */
 #define TERROR	11			/* A lexical error */
 #define TBANG	12			/* A '!' */
+#define TOVER	13			/* A '>' */
+#define TUNDER	14			/* A '<' */
+#define TEQUAL	15			/* A '=' */
 
 #define	REGDEP	2			/* Maximum regret depth. */
 #define	STRINGLEN	1024		/* Maximum length of string token */
@@ -314,4 +317,24 @@ struct ignoretab {
 #define	CMREAD		020		/* Read messages */
 #define M_ALL           037		/* All possible messages */
 
+/* size check values */
+#define SC_LINES	  1		/* check m_lines */
+#define SC_CLINES	  2		/* chcck of cent (100) m_lines */
+#define SC_BYTES	  3		/* check of m_size */
+#define SC_KBYTES	  4		/* check of kilo (1024) m_size */
+#define SC_MBYTES	  5		/* check of mega (1024*1024) m_size */
 
+#define SC_LINES_CHAR	  'l'		/* check m_lines */
+#define SC_LINES_ALT	  'L'
+#define SC_CLINES_CHAR	  'c'		/* chcck of cent (100) m_lines */
+#define SC_CLINES_ALT	  'C'
+#define SC_BYTES_CHAR	  'b'		/* check of m_size */
+#define SC_BYTES_ALT 	  'B'		
+#define SC_KBYTES_CHAR	  'k'		/* check of kilo (1024) m_size */
+#define SC_KBYTES_ALT     'K'
+#define SC_MBYTES_CHAR	  'm'		/* check of mega (1024*1024) m_size */
+#define SC_MBYTES_ALT     'M'
+
+#define TO_CENT(x)  (((x) + 99) / 100)
+#define TO_KILO(x) (((x) + 1023) / 1024)
+#define TO_MEGA(x) (((x) + 1048575) / 1048576)

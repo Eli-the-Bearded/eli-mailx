@@ -108,6 +108,13 @@ struct coltab {
 
 static	int	lastcolmod;
 
+/*
+ * This does the main work of parsing the description of the messages
+ * to be selected. buf is the command buffer from the user, f is a 
+ * set of message flags that must also be met. delete() / undelete()
+ * select things differently than print() for from(), f gives us the
+ * rules to use.
+ */
 int
 markall(buf, f)
 	char buf[];
@@ -117,7 +124,7 @@ markall(buf, f)
 	register int i;
 	register struct message *mp;
 	char *namelist[NMLSIZE], *bufp;
-	int tok, beg, mc, star, other, valdot, colmod, colresult;
+	int tok, beg, mc, star, other, valdot, colmod, colresult, check_value;
 
 	valdot = dot - &message[0] + 1;
 	colmod = 0;
@@ -131,6 +138,7 @@ markall(buf, f)
 	star = 0;
 	other = 0;
 	beg = 0;
+	check_value = 0;
 	while (tok != TEOL) {
 		switch (tok) {
 
@@ -223,6 +231,61 @@ number:
 			}
 			else
 				*np++ = savestr(lexstring);
+			break;
+
+		case TOVER:
+		case TUNDER:
+		case TEQUAL:
+			if(lexsizecheck < 0) {
+				puts("Need a size value\n");
+				return(-1);
+			}
+
+			/* find matching messages */
+			for (i = 0; i < msgCount; i++)
+				if (f == M_ALL || (message[i].m_flag & MDELETED) == f) {
+					int check_match = 0;
+
+					switch (lexsizeflag) {
+						case SC_LINES:
+							check_value = message[i].m_lines;
+							break;
+						case SC_CLINES:
+							check_value = TO_CENT(message[i].m_lines);
+							break;
+						case SC_BYTES:
+							check_value = message[i].m_size;
+							break;
+						case SC_KBYTES:
+							check_value = TO_KILO(message[i].m_size);
+							break;
+						case SC_MBYTES:
+							check_value = TO_MEGA(message[i].m_size);
+							break;
+
+					}
+
+					switch (tok) {
+						case TEQUAL:
+							check_match = (check_value == lexsizecheck);
+							break;
+						case TUNDER:
+							check_match = (check_value < lexsizecheck);
+							break;
+						case TOVER:
+							check_match = (check_value > lexsizecheck);
+							break;
+					}
+					if(check_match) {
+						mark(i+1);
+						mc++;
+					}
+				}
+			if (mc == 0) {
+				printf("No applicable messages.\n");
+				return(-1);
+			}
+			return(0);
 			break;
 
 		case TDOLLAR:
@@ -520,6 +583,12 @@ struct lex {
 	{ '!',	TBANG },
 	{ 0,	0 }
 };
+struct lex sizechecks[] = {
+	{ '=',	TEQUAL },
+	{ '<',	TUNDER },
+	{ '>',	TOVER },
+	{ 0,	0 }
+};
 
 int
 scan(sp)
@@ -587,6 +656,83 @@ scan(sp)
 			*sp = cp;
 			return(lp->l_token);
 		}
+
+	/*
+	 * The various size check operators
+	 * Format: OPERATOR VALUE [ FLAG ]
+	 * With optional whitespace in there.
+	 */
+	for (lp = &sizechecks[0]; lp->l_char != 0; lp++)
+		if (c == lp->l_char) {
+			lexsizecheck = -1;
+			lexsizeflag  = 0;
+			lexstring[0] = c;
+			lexstring[1] = '\0';
+
+			c = *cp++;
+
+			/* skip whitespace and test for EOL */
+			while (c == ' ' || c == '\t')
+				c = *cp++;
+			if (c == '\0') {
+				*sp = --cp;
+				fputs("Incomplete size check\n", stderr);
+				return(TERROR);
+			}
+
+			if (isdigit(c)) {
+				lexsizecheck = 0;
+				while (isdigit(c)) {
+					lexsizecheck = lexsizecheck*10 + c - '0';
+					c = *cp++;
+				}
+				*sp = --cp;
+			} else {
+				fputs("Could not understand size check\n", stderr);
+				return(TERROR);
+			}
+
+			/* skip whitespace and test for EOL */
+			while (c == ' ' || c == '\t')
+				c = *cp++;
+			if (c == '\0') {
+				*sp = --cp;
+				
+				/* default flag */
+			  	lexsizeflag = SC_LINES;
+				return(lp->l_token);
+			}
+
+			/* check for a flag */
+			switch(c) {
+			  case SC_LINES_CHAR:
+			  case SC_LINES_ALT:
+			  	lexsizeflag = SC_LINES;
+				break;
+			  case SC_CLINES_CHAR:
+			  case SC_CLINES_ALT:
+			  	lexsizeflag = SC_CLINES;
+				break;
+			  case SC_BYTES_CHAR:
+			  case SC_BYTES_ALT:
+			  	lexsizeflag = SC_BYTES;
+				break;
+			  case SC_KBYTES_CHAR:
+			  case SC_KBYTES_ALT:
+			  	lexsizeflag = SC_KBYTES;
+				break;
+			  case SC_MBYTES_CHAR:
+			  case SC_MBYTES_ALT:
+			  	lexsizeflag = SC_MBYTES;
+				break;
+			  default:
+				fputs("Unknow size check flag\n", stderr);
+				return(TERROR);
+			}
+
+			c = *cp++;
+			return(lp->l_token);
+		} /* size check operator */
 
 	/*
 	 * We've got a string!  Copy all the characters
