@@ -47,8 +47,13 @@
 .Ar to-addr...
 .Nm mail
 .Op Fl iInNv
+.Op Fl e Ar command
 .Fl f
 .Op Ar name
+.Nm mail
+.Op Fl iInNv
+.Op Fl e Ar command
+.Op Fl F Ar boxvar
 .Nm mail
 .Op Fl iInNv
 .Op Fl e Ar command
@@ -111,9 +116,17 @@ for processing; when you
 .Ar quit  ,
 .Nm mail
 writes undeleted messages back to this file.
+.It Fl F
+Takes a
+.Ar boxvar
+argument and then works like 
+.Dl mail -f /some/path/file
+would if your
+.Pa \&.mailrc
+file contained the line
+.Dl set boxvar=/some/path/file
 .It Fl u
 Is equivalent to:
-.Pp
 .Dl mail -f /var/spool/mail/user
 (but is overridden if the environment variable
 .Em MAIL
@@ -193,16 +206,43 @@ deletes messages 1 through 5.
 Similarly search terms can be used. Show a one line summary of messages
 from john:
 .Dq Li from john
-Or messages with IMPORTANT in the subject:
+Or find messages with IMPORTANT in the subject:
 .Dq Li from /IMPORTANT
 (use quotes starting before the 
 .Ql Li \&/
 if the search string has spaces).
+.Pp
+Messages can also be searched for by size, for finding space hogs.
+The general format is 
+.Ic OPERATOR SIZE [ FLAG ]
+where OPERATOR is one of 
+.Ql Li \&<
+,
+.Ql Li \&>
+, or
+.Ql Li \&=
+, SIZE is a number, and FLAG determines if measuring lines or bytes, or
+batches of those. The FLAG can be:
+.Bl -tag -width flag
+.It Ic l
+lines in a message (the default if no FLAG is given)
+.It Ic C
+hundreds of lines in a message
+.It Ic b
+bytes in a message
+.It Ic K
+kilobytes (1024 bytes) in a message
+.It Ic M
+megabytes in a message
+.El
+.Pp
 The special name
 .Ql Li \&*
 addresses all messages,
 .Ql Li \&!
-reuses the previous specified set, and
+reuses the previous specified set,
+.Ql Li \&^
+names the first message, and
 .Ql Li \&$
 addresses
 the last message; thus the command
