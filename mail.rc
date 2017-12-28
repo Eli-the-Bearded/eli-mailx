@@ -1,2 +1,32 @@
 set ask askcc append dot save crt
 ignore Received Message-Id Resent-Message-Id Status Mail-From Return-Path Via
+
+# various versions of mailx will happily let you set variables even if
+# there is no way to use them. etbmailx offers commands that do use them.
+
+# some variables to use with -F (command line) or S (save to variable)
+set biz.box=~/maildir/biz.box
+
+# used generally for messages that were mis-sorted and need filter fixes
+set spam=~/maildir/SPAM
+set not-spam=~/maildir/not-spam
+
+# nail, for example, will stop processing the mailrc upon seeing the next line
+if etbmailx
+  # headers to be highlighted
+  highlight subject from
+
+  # Terminal control sequences for highlight command
+  # (traditional mailx does not do backticks.)
+  # smul: set mode underline
+  set starthlstr=`tput smul`
+  # rmul: remove mode underline
+  set endhlstr=`tput smul`
+
+  # -R needed to not escape highlight sequences
+  set PAGER="less -R"
+
+  # alternative reply mail program, use with "rnmail" command
+  set RNMAIL="Rnmail -r"
+endif
+# might never be reached by a non-etbmailx .mailrc file user
