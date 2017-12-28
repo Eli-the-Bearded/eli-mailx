@@ -397,6 +397,7 @@ expand(name)
 		name = savestr(xname);
 	}
 	/* catch the most common shell meta character */
+	/* homedir is set to $HOME or . in tinit() */
 	if (name[0] == '~' && (name[1] == '/' || name[1] == '\0')) {
 		snprintf(xname, PATHSIZE, "%s%s", homedir, name + 1);
 		name = savestr(xname);
@@ -407,6 +408,7 @@ expand(name)
 		perror("pipe");
 		return name;
 	}
+	/* expand any shell globs left (~/ handled already above) */
 	snprintf(cmdbuf, PATHSIZE, "echo %s", name);
 	if ((shell = value("SHELL")) == NOSTR)
 		shell = _PATH_CSHELL;

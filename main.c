@@ -76,6 +76,7 @@ main(argc, argv)
 	struct name *to, *cc, *bcc, *smopts;
 	char *subject;
 	char *ef;
+	char *ef_var;
 	char *cmdoption;
 	char nosrc = 0;
 	sig_t prevint;
@@ -111,6 +112,7 @@ main(argc, argv)
 	 * first of these users.
 	 */
 	ef = NOSTR;
+	ef_var = NOSTR;
 	to = NIL;
 	cc = NIL;
 	bcc = NIL;
@@ -118,7 +120,7 @@ main(argc, argv)
 	smopts = NIL;
 	subject = NOSTR;
 	shown_eof = 0;
-	while ((i = getopt(argc, argv, "INT:b:c:dfins:u:ve:")) != EOF) {
+	while ((i = getopt(argc, argv, "INT:b:c:dF:fins:u:ve:")) != EOF) {
 		switch (i) {
 		case 'T':
 			/*
@@ -171,10 +173,25 @@ main(argc, argv)
 			 * getopt() can't handle optional arguments, so here
 			 * is an ugly hack to get around it.
 			 */
+			if((ef != NOSTR) || (ef_var != NOSTR)) {
+				fprintf(stderr, "Can't specify multiple files to read\n");
+				exit(1);
+			}
 			if ((argv[optind]) && (argv[optind][0] != '-'))
 				ef = argv[optind++];
 			else
 				ef = "&";
+			break;
+		case 'F':
+			/*
+			 * like -f, but the file is a variable set in a
+			 * mailrc file (and we always want the arg)
+			 */
+			if((ef != NOSTR) || (ef_var != NOSTR)) {
+				fprintf(stderr, "Can't specify multiple files to read\n");
+				exit(1);
+			}
+			ef_var = optarg;
 			break;
 		case 'n':
 			/*
@@ -233,8 +250,8 @@ Usage: mail [-iInv] [-s subject] [-c cc-addr] [-b bcc-addr] to-addr ...\n\
 		fputs("You must specify direct recipients with -s, -c, or -b.\n", stderr);
 		exit(1);
 	}
-	if (ef != NOSTR && to != NIL) {
-		fprintf(stderr, "Cannot give -f and people to send to.\n");
+	if (((ef != NOSTR) || (ef_var != NOSTR)) && to != NIL) {
+		fprintf(stderr, "Cannot give -f/-F and people to send to.\n");
 		exit(1);
 	}
 	tinit();
@@ -263,6 +280,14 @@ Usage: mail [-iInv] [-s subject] [-c cc-addr] [-b bcc-addr] to-addr ...\n\
 	 */
 	if (ef == NOSTR)
 		ef = "%";
+	/* value lookup needs to come after the load() of ~/.mailrc */
+	if (ef_var != NOSTR) {
+		ef = value(ef_var);
+		if(ef == NOSTR) {
+			fprintf(stderr, "No variable '%s' to exand.\n", ef_var);
+			exit(1);
+		}
+	}
 	if (setfile(ef) < 0)
 		exit(1);		/* error already reported */
 	if (setjmp(hdrjmp) == 0) {
