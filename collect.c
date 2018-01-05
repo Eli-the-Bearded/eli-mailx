@@ -564,11 +564,11 @@ forward(ms, fp, f)
 		return(0);
 	if (*msgvec == 0) {
 		*msgvec = first(0, MMNORM);
-		if (*msgvec == NULL) {
+		if (*msgvec == NOMVEC) {
 			printf("No appropriate messages\n");
 			return(0);
 		}
-		msgvec[1] = NULL;
+		msgvec[1] = NOMVEC;
 	}
 	if (f == 'f' || f == 'F')
 		tabst = NOSTR;

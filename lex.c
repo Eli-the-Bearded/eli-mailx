@@ -361,9 +361,9 @@ execute(linebuf, contxt)
 		if (c  == 0) {
 			*msgvec = first(com->c_msgflag,
 				com->c_msgmask);
-			msgvec[1] = NULL;
+			msgvec[1] = NOMVEC;
 		}
-		if (*msgvec == NULL) {
+		if (*msgvec == NOMVEC) {
 			printf("No applicable messages\n");
 			break;
 		}
