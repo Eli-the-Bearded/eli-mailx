@@ -59,6 +59,8 @@ static char rcsid[] = "$OpenBSD: fio.c,v 1.5 1996/06/08 19:48:22 christos Exp $"
 
 /*
  * Set up the input pointers while copying the mail file into /tmp.
+ * mestmp file contains all the message pointers until we reach end of
+ * mbox, then makemessage() allocates memory for the whole array at once.
  */
 void
 setptr(ibuf)
@@ -117,6 +119,7 @@ setptr(ibuf)
 			this.m_flag = MUSED|MNEW;
 			this.m_size = 0;
 			this.m_lines = 0;
+			/* block number in file, and how far into that block */
 			this.m_block = blockof(offset);
 			this.m_offset = offsetof(offset);
 			inhead = 1;

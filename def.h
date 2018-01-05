@@ -74,6 +74,8 @@ struct message {
 	/* block, offset and lines should not be shorts (as they were
 	/* in the past) since those are too easy to overflow with large
 	/* mail messages.					Elijah
+        /* block is on-disk block, used for optimizing reads to nice
+         * boundaries.
 	 */
 	long	m_block;		/* block number of this message */
 	long	m_offset;		/* offset in block of message */
@@ -100,10 +102,12 @@ struct message {
 
 /*
  * Given a file address, determine the block number it represents.
+ * 8k is probably a good size in 2017, better than the old 4k.
  */
-#define blockof(off)			((int) ((off) / 4096))
-#define offsetof(off)			((int) ((off) % 4096))
-#define positionof(block, offset)	((off_t)(block) * 4096 + (offset))
+#define BLOCK_SIZE			8192
+#define blockof(off)			((int) ((off) / (BLOCK_SIZE)))
+#define offsetof(off)			((int) ((off) % (BLOCK_SIZE)))
+#define positionof(block, offset)	((off_t)(block) * (BLOCK_SIZE) + (offset))
 
 /*
  * Format of the command description table.
@@ -224,6 +228,7 @@ struct grouphead {
 #define	NOVAR	((struct var *) 0)	/* The nil pointer to variables */
 #define	NOGRP	((struct grouphead *) 0)/* The nil grouphead pointer */
 #define	NOGE	((struct group *) 0)	/* The nil group pointer */
+#define NOMVEC  ((int)NULL)		/* Empty msgvec entry */
 
 /*
  * Structure of the hash table of ignored header fields

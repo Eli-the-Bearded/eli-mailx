@@ -48,3 +48,29 @@ default: all
 	install -c -m 644 $(MFILES) $(DESTDIR)/usr/man/man1/
 	cd misc && install -c -m 644 $(EFILES) $(DESTDIR)/etc/
 	cd misc && install -c -m 644 $(SFILES) $(DESTDIR)/usr/lib/
+
+aux.o: def.h extern.h glob.h rcv.h pathnames.h
+cmd1.o: def.h extern.h glob.h rcv.h pathnames.h
+cmd2.o: def.h extern.h glob.h rcv.h pathnames.h
+cmd3.o: def.h extern.h glob.h rcv.h pathnames.h
+cmdtab.o: def.h extern.h pathnames.h
+collect.o: def.h extern.h glob.h rcv.h pathnames.h
+dotlock.o: def.h extern.h glob.h rcv.h pathnames.h
+edit.o: def.h extern.h glob.h rcv.h pathnames.h
+fio.o: def.h extern.h glob.h rcv.h pathnames.h
+getname.o: def.h extern.h glob.h rcv.h pathnames.h
+head.o: def.h extern.h glob.h rcv.h pathnames.h
+lex.o: def.h extern.h glob.h rcv.h pathnames.h
+list.o: def.h extern.h glob.h rcv.h pathnames.h
+main.o: def.h extern.h glob.h rcv.h pathnames.h
+names.o: def.h extern.h glob.h rcv.h pathnames.h
+# no_dot_lock.o has no dependencies on non-system includes
+popen.o: def.h extern.h glob.h rcv.h pathnames.h
+quit.o: def.h extern.h glob.h rcv.h pathnames.h
+send.o: def.h extern.h glob.h rcv.h pathnames.h
+strings.o: def.h extern.h glob.h rcv.h pathnames.h
+temp.o: def.h extern.h glob.h rcv.h pathnames.h
+tty.o: def.h extern.h glob.h rcv.h pathnames.h
+v7.local.o: def.h extern.h glob.h rcv.h pathnames.h
+vars.o: def.h extern.h glob.h rcv.h pathnames.h
+# version.o has no dependencies on non-system includes
