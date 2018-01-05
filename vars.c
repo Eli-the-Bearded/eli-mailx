@@ -103,7 +103,7 @@ vcopy(str)
 		return "";
 	len = strlen(str) + 1;
 	if ((new = malloc(len)) == NULL)
-		panic("Out of memory");
+		panic("Out of memory (vcopy)");
 	bcopy(str, new, (int) len);
 	return new;
 }

@@ -240,7 +240,7 @@ register_file(fp, pipe, pid)
 	struct fp *fpp;
 
 	if ((fpp = (struct fp *) malloc(sizeof *fpp)) == NULL)
-		panic("Out of memory");
+		panic("Out of memory (register_file)");
 	fpp->fp = fp;
 	fpp->pipe = pipe;
 	fpp->pid = pid;
@@ -260,7 +260,7 @@ unregister_file(fp)
 			free((char *) p);
 			return;
 		}
-	panic("Invalid file pointer");
+	panic("Invalid file pointer (unregister_file)");
 }
 
 static int
@@ -272,7 +272,7 @@ file_pid(fp)
 	for (p = fp_head; p; p = p->link)
 		if (p->fp == fp)
 			return (p->pid);
-	panic("Invalid file pointer");
+	panic("Invalid file pointer (file_pid)");
 	/*NOTREACHED*/
 }
 

@@ -482,7 +482,7 @@ edstop()
 		}
 		chmod(tempname,0600);
 		ftruncate(obuf_fd,0);
-		obuf = fdopen(obuf_fd, "w");
+		obuf = Fdopen(obuf_fd, "w");
 
 		if ((ibuf = Fopen(mailname, "r")) == NULL) {
 			perror(mailname);
