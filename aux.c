@@ -582,6 +582,7 @@ skin(name)
 			break;
 
 		case ' ':
+			/* super super old fashioned addressing: foo at bar */
 			if (cp[0] == 'a' && cp[1] == 't' && cp[2] == ' ')
 				cp += 3, *cp2++ = '@';
 			else
@@ -619,7 +620,8 @@ skin(name)
 			/* Fall into . . . */
 
 		default:
-			if (lastsp) {
+                        /* use just one space, but not if inside <brackets> */
+			if (lastsp && !gotlt) {
 				lastsp = 0;
 				*cp2++ = ' ';
 			}
