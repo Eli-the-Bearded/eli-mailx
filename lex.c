@@ -503,6 +503,11 @@ isprefix(as1, as2)
 
 	s1 = as1;
 	s2 = as2;
+
+	/* this allows comments to start with "#" instead of "# " */
+	if ((*s1 == *s2) && (*s2 == '#'))
+		return(1);
+
 	while (*s1++ == *s2)
 		if (*s2++ == '\0')
 			return(1);
