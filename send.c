@@ -393,9 +393,9 @@ mail1(hp, printheaders)
 		}
 	if (fsize(mtf) == 0)
 		if (hp->h_subject == NOSTR)
-			printf("No message, no subject; hope that's ok\n");
+			printf("No message, no subject; hope that's correct\n");
 		else
-			printf("Null message body; hope that's ok\n");
+			printf("Null message body; hope that's correct\n");
 	/*
 	 * Now, take the user names from the combined
 	 * to and cc lists and do all the alias
