@@ -284,7 +284,7 @@ Usage: mail [-iInv] [-s subject] [-c cc-addr] [-b bcc-addr] to-addr ...\n\
 	if (ef_var != NOSTR) {
 		ef = value(ef_var);
 		if(ef == NOSTR) {
-			fprintf(stderr, "No variable '%s' to exand.\n", ef_var);
+			fprintf(stderr, "No variable '%s' to expand.\n", ef_var);
 			exit(1);
 		}
 	}
