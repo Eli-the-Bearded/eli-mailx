@@ -365,14 +365,19 @@ cant:
 
 /*
  * Determine if the passed address is a local "send to file" address.
- * If any of the network metacharacters precedes any slashes, it can't
- * be a filename.  We cheat with .'s to allow path names like ./...
+ * If any of the network metacharacters precedes any slashes, it "can't"
+ * be a filename.  But slashes are allowed in local-parts:
+ *	+anything			fileaddr: anything
+ *	./box.name			fileaddr: ./box.name
+ *	somesuch@place/bar		not file addr (!)
+ *	foo+bar/baz@site.tld		not file addr
  */
 int
 isfileaddr(name)
 	char *name;
 {
 	register char *cp;
+	int has_slash = 0;
 
 	if (*name == '+')
 		return 1;
@@ -380,9 +385,9 @@ isfileaddr(name)
 		if (*cp == '!' || *cp == '%' || *cp == '@')
 			return 0;
 		if (*cp == '/')
-			return 1;
+			has_slash = 1;
 	}
-	return 0;
+	return has_slash;
 }
 
 /*
