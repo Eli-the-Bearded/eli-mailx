@@ -781,6 +781,10 @@ isign(field, ignore)
 	 */
 	istrcpy(realfld, field, BUFSIZ);
 	realfld[BUFSIZ-1]='\0';
+	/*
+	 * If there are any headers in retain list, use that instead of
+	 * the ignore list, just reversing the membership test.
+	 */
 	if (ignore[1].i_count > 0)
 		return (!member(realfld, ignore + 1));
 	else
@@ -817,9 +821,46 @@ ishl(field, highlight)
 	 */
 	istrcpy(realfld, field, BUFSIZ);
 	realfld[BUFSIZ-1]='\0';
+	return (member(realfld, highlight));
+}
+
+/*
+ * A hardcoded default interesting header list check
+ */
+int
+definter(field)
+	char *field;
+{
+	if(*field == 't' && equal("to", field))
+		return(1);
+	if(*field == 'f' && equal("from", field))
+		return(1);
+	if(*field == 's' && equal("subject", field))
+		return(1);
+	if(*field == 'c' && equal("cc", field))
+		return(1);
+	return (0);
+}
+
+/*
+ * See if the given header field is interesting
+ */
+int
+isinter(field, highlight)
+	char *field;
+	struct ignoretab highlight[2];
+{
+	char realfld[BUFSIZ];
+
+	/*
+	 * Lower-case the string, so that "Status" and "status"
+	 * will hash to the same place.
+	 */
+	istrcpy(realfld, field, BUFSIZ);
+	realfld[BUFSIZ-1]='\0';
 	if (highlight[1].i_count > 0)
-		return (!member(realfld, highlight + 1));
+		return (member(realfld, highlight+1));
 	else
-		return (member(realfld, highlight));
+		return (definter(realfld));
 }
 

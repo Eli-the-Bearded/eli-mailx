@@ -67,7 +67,7 @@
 #define	NOSTR		((char *) 0)	/* Null string pointer */
 #define	MAXEXP		25		/* Maximum expansion of aliases */
 
-#define	equal(a, b)	(strcmp(a,b)==0)/* A nice function to string compare */
+#define	equal(a, b)	(strncmp(a,b,BUFSIZ)==0)/* A nice function to string compare */
 
 struct message {
 	short	m_flag;			/* flags, see below */
@@ -232,6 +232,7 @@ struct grouphead {
 
 /*
  * Structure of the hash table of ignored header fields
+ * (also used for interesting / highlighted fields.)
  */
 struct ignoretab {
 	int i_count;			/* Number of entries */
@@ -324,7 +325,7 @@ struct ignoretab {
 
 /* size check values */
 #define SC_LINES	  1		/* check m_lines */
-#define SC_CLINES	  2		/* chcck of cent (100) m_lines */
+#define SC_CLINES	  2		/* check of cent (100) m_lines */
 #define SC_BYTES	  3		/* check of m_size */
 #define SC_KBYTES	  4		/* check of kilo (1024) m_size */
 #define SC_MBYTES	  5		/* check of mega (1024*1024) m_size */
@@ -340,6 +341,6 @@ struct ignoretab {
 #define SC_MBYTES_CHAR	  'm'		/* check of mega (1024*1024) m_size */
 #define SC_MBYTES_ALT     'M'
 
-#define TO_CENT(x)  (((x) + 99) / 100)
+#define TO_CENT(x) (((x) + 99) / 100)
 #define TO_KILO(x) (((x) + 1023) / 1024)
 #define TO_MEGA(x) (((x) + 1048575) / 1048576)

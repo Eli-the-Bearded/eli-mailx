@@ -70,6 +70,7 @@ const struct cmd cmdtab[] = {
 	{ "Print",	Type,		MSGLIST,	0,	MMNDEL }, 
 	{ "visual",	visual,		I|MSGLIST,	0,	MMNORM },
 	{ "top",	top,		MSGLIST,	0,	MMNDEL },
+	{ "summary",	headersum,	MSGLIST,	0,	MMNDEL },
 	{ "touch",	stouch,		W|MSGLIST,	0,	MMNDEL },
 	{ "preserve",	preserve,	W|MSGLIST,	0,	MMNDEL },
 /* M_ALL: msgflag: Allow me do "delete" a message already deleted. */
@@ -130,6 +131,7 @@ const struct cmd cmdtab[] = {
 	{ "ignore",	igfield,	M|RAWLIST,	0,	1000 },
 	{ "discard",	igfield,	M|RAWLIST,	0,	1000 },
 	{ "highlight",	hlfield,	M|RAWLIST,	0,	1000 },
+	{ "interest",	interfield,	M|RAWLIST,	0,	1000 },
 	{ "retain",	retfield,	M|RAWLIST,	0,	1000 },
 	{ "saveignore",	saveigfield,	M|RAWLIST,	0,	1000 },
 	{ "savediscard",saveigfield,	M|RAWLIST,	0,	1000 },

@@ -82,7 +82,8 @@ struct	ignoretab	saveignore[2];	/* ignored and retained fields
 					   on save to folder */
 struct	ignoretab	ignoreall[2];	/* special, ignore all headers */
 struct	ignoretab	highlight[2];	/* same structure, but which headers
-					   to highlight */
+					   to highlight. 0 for hlstart/hlend
+					   1 for show selected headers */
 char	**altnames;			/* List of alternate names for user */
 int	debug;				/* Debug flag set */
 int	screenwidth;			/* Screen width, or best guess */

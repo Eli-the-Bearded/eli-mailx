@@ -522,6 +522,84 @@ brokpipe(signo)
 }
 
 /*
+ * Print a few selected headers from each desired message.
+ * The headers are those listed in the interesting list,
+ * an ignoretab structure. If no headers on on the list,
+ * default to To, From, CC, and Subject (or whatever is
+ * hardcoded in definter() in some future time).
+ */
+int
+headersum(v)
+	void *v;
+{
+	int *msgvec = v;
+	register int *ip;
+	register struct message *mp;
+	int count, lines, int_cache, infld;
+	char *cp, *cp2, c, linebuf[LINESIZE];
+	FILE *ibuf;
+
+	for (ip = msgvec; *ip && ip-msgvec < msgCount; ip++) {
+		/* start out like top() */
+		mp = &message[*ip - 1];
+		touch(mp);
+		dot = mp;
+		if (value("quiet") == NOSTR) {
+			/* use less verbose message count, without
+			 * noting the deleted.
+			 */
+			starthl(stdout);
+			printf("Message %d of %d", *ip, msgCount);
+			endhl(stdout);
+			puts(":");
+		}
+		ibuf = setinput(mp);
+		count = mp->m_lines;
+		infld = int_cache = 0;
+		for (lines = 0; lines < count; lines++) {
+			/* break on read error */
+			if (readline(ibuf, linebuf, LINESIZE) < 0)
+				break;
+
+			/* skip "From " line */
+			if(lines == 0) 
+				continue;
+
+			/* break on end of headers */
+			if(linebuf[0] == '\n')
+				continue;
+
+			if (infld && (linebuf[0] == ' ' || linebuf[0] == '\t')) {
+				/* multiline header */
+				if(int_cache) {
+					puts(linebuf);
+				}
+				continue;
+			}
+
+			/* Now like send() but without ancient uucp
+			 * headerless mail case
+			 */
+
+			/* Find a header field. Recall "Foo : bar" is allowed */
+			for (cp = linebuf; (c = *cp++) && c != ':' && !isspace(c);)
+				;
+
+			cp2 = --cp;
+			*cp2 = 0;	/* temporarily null terminate */
+			int_cache = 0;
+			infld = 1;
+			if(isinter(linebuf, highlight)) {
+				int_cache = 1;
+				*cp2 = c;	/* restore */
+				puts(linebuf);
+			}
+		}
+	}
+	return(0);
+}
+
+/*
  * Print the top so many lines of each desired message.
  * The number of lines is taken from the variable "toplines"
  * and defaults to 5.
@@ -553,7 +631,10 @@ top(v)
 			/* in 'top' use less verbose message count, without
 			 * noting the deleted.
 			 */
-			printf("Message %d of %d:\n", *ip, msgCount);
+			starthl(stdout);
+			printf("Message %d of %d", *ip, msgCount);
+			endhl(stdout);
+			puts(":");
 		}
 		ibuf = setinput(mp);
 		c = mp->m_lines;

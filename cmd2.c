@@ -508,6 +508,19 @@ hlfield(v)
 }
 
 /*
+ * Add the given header fields to the interesting list.
+ * If no arguments, print the current list of interesting fields.
+ */
+int
+interfield(v)
+	void *v;
+{
+	char **list = v;
+
+	return ignore1(list, highlight + 1, "interesting");
+}
+
+/*
  * Add the given header fields to the ignored list.
  * If no arguments, print the current list of ignored fields.
  */

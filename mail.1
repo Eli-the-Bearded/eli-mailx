@@ -577,6 +577,12 @@ If
 .Ic ignore
 is executed with no arguments, it lists the current set of
 ignored fields.
+.It Ic interest
+Add the list of header fields named to the
+.Ar interesting list .
+Header fields that are "interesting" are shown when using the
+.Ic summary
+command.
 .It Ic highlight
 Add the list of header fields named to the
 .Ar highlighted list .
@@ -740,6 +746,13 @@ The
 .Ic source
 command reads
 commands from a file.
+.It Ic summary
+Prints the
+.Ic interesting
+headers from messages. The headers default to "To", "From", "Subject",
+and "CC" but an explicit list can be made with the
+.Ic interest
+command.
 .It Ic top
 Takes a message list and prints the top few lines of each.
 The number of
