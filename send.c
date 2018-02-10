@@ -53,10 +53,12 @@ static char rcsid[] = "$OpenBSD: send.c,v 1.6 1996/06/08 19:48:39 christos Exp $
 
 /*
  * Send message described by the passed pointer to the
- * passed output buffer.  Return -1 on error.
+ * passed output buffer. Used during mailing, display,
+ * interpolating messages during compostion, and saving.
+ * Return -1 on error.
  * Adjust the status: field if need be.
  * If doign is given, suppress ignored header fields.
- * prefix is a string to prepend to each output line.
+ * prefix is a string to prepend to each output line (eg ">")
  */
 int
 send(mp, obuf, doign, prefix)
