@@ -567,7 +567,7 @@ headersum(v)
 
 			/* break on end of headers */
 			if(linebuf[0] == '\n')
-				continue;
+				break;
 
 			if (infld && (linebuf[0] == ' ' || linebuf[0] == '\t')) {
 				/* multiline header */
