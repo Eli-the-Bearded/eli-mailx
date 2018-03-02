@@ -542,7 +542,6 @@ headersum(v)
 	for (ip = msgvec; *ip && ip-msgvec < msgCount; ip++) {
 		/* start out like top() */
 		mp = &message[*ip - 1];
-		touch(mp);
 		dot = mp;
 		if (value("quiet") == NOSTR) {
 			/* use less verbose message count, without
@@ -566,7 +565,7 @@ headersum(v)
 				continue;
 
 			/* break on end of headers */
-			if(linebuf[0] == '\n')
+			if(linebuf[0] == '\0')
 				break;
 
 			if (infld && (linebuf[0] == ' ' || linebuf[0] == '\t')) {
@@ -625,7 +624,6 @@ top(v)
 	lineb = 1;
 	for (ip = msgvec; *ip && ip-msgvec < msgCount; ip++) {
 		mp = &message[*ip - 1];
-		touch(mp);
 		dot = mp;
 		if (value("quiet") == NOSTR) {
 			/* in 'top' use less verbose message count, without
