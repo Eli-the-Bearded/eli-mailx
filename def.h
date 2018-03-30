@@ -228,7 +228,7 @@ struct grouphead {
 #define	NOVAR	((struct var *) 0)	/* The nil pointer to variables */
 #define	NOGRP	((struct grouphead *) 0)/* The nil grouphead pointer */
 #define	NOGE	((struct group *) 0)	/* The nil group pointer */
-#define NOMVEC  ((int)NULL)		/* Empty msgvec entry */
+#define NOMVEC  ((int) 0)		/* Empty msgvec entry */
 
 /*
  * Structure of the hash table of ignored header fields
