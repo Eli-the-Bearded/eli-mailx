@@ -136,6 +136,22 @@ touch(mp)
 }
 
 /*
+ * Set (op is true) or clear (op is false) a flag (or flags) on a message.
+ */
+void
+flag(mp,op,flag)
+	register struct message *mp;
+	int op;
+	short flag;
+{
+	if (op) {
+	    mp->m_flag |= flag;
+	} else {
+	    mp->m_flag &= ~flag;
+	}
+}
+
+/*
  * Echo a generic highlight sequence. No terminal type checking.
  * Cheesy, but no need to link to curses either. 		BEG
  * But backticks are now allowed in set assignments, so you can

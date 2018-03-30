@@ -84,7 +84,7 @@ struct message {
 };
 
 /*
- * flag bits: type short
+ * flag bits: type short, so 16 bits 1 to 32768
  */
 
 #define MUSED             1      /* entry is used, but this bit isn't */
@@ -99,6 +99,15 @@ struct message {
 #define MSTATUS         512      /* message status has changed */
 #define MBOX           1024      /* Send this to mbox, regardless */
 #define MLASTMARK      2048      /* Message mark history */
+#define MREMEMBER      4096      /* unsaved user flag */
+#define MFLAG          8192      /* saved user flag */
+/*unused Mname        16384 */
+/*unused Mname        32768 */
+#define MBOTHUSER	(MREMEMBER|MFLAG)
+
+/* operation for flag() */
+#define FLAGUNSET         0
+#define FLAGSET           1
 
 /*
  * Given a file address, determine the block number it represents.
@@ -321,7 +330,12 @@ struct ignoretab {
 #define	CMUNREAD	 04		/* Unread messages */
 #define	CMDELETED	010		/* Deleted messages */
 #define	CMREAD		020		/* Read messages */
-#define M_ALL           037		/* All possible messages */
+#define CMREMEMBER     0100		/* user session-only flagged messages */
+#define CMFLAG         0200		/* user saved flaged messages */
+#define CMNOUSER       0400		/* neither user saved flagged messages */
+
+#define CMBOTHUSER     0300		/* either user flagged messages */
+#define M_ALL          0337		/* All possible messages */
 
 /* size check values */
 #define SC_LINES	  1		/* check m_lines */
@@ -344,3 +358,27 @@ struct ignoretab {
 #define TO_CENT(x) (((x) + 99) / 100)
 #define TO_KILO(x) (((x) + 1023) / 1024)
 #define TO_MEGA(x) (((x) + 1048575) / 1048576)
+
+/* for flags on the Status: header */
+#define STATUS_SIZE	8
+
+/* longest entry in coltab.co_name is currently 22 */
+#define CO_NAMESIZE	24
+
+/* column tab entries that are not used as disposition characters */
+#define COLT_NEW	'n'
+#define COLT_OLD	'o'
+#define COLT_DEL	'd'
+#define COLT_NONE	'U'	/* no mark, no flag */
+
+/* disposition characters used in from summaries and some in column tab */
+#define DISP_NEW	' '
+#define DISP_READ	'r'
+#define DISP_SAVE	'*'
+#define DISP_PRES	'P'
+#define DISP_UNRD	'u'
+#define DISP_MBOX	'M'
+#define DISP_FLAG	'f'
+#define DISP_REMB	'm'	/* aka mark */
+#define DISP_BOTH	'B'	/* mark and flag */
+

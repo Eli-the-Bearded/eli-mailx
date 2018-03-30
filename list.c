@@ -93,17 +93,22 @@ getmsglist(buf, vector, flags)
  */
 
 struct coltab {
-	char	co_char;		/* What to find past : */
+	char	co_char;		/* What filter name after : */
 	int	co_bit;			/* Associated modifier bit */
 	int	co_mask;		/* m_status bits to mask */
 	int	co_equal;		/* ... must equal this */
+	char    co_name[CO_NAMESIZE];	/* Name to print */
 } coltab[] = {
-	{ 'n',		CMNEW,		MNEW,		MNEW },
-	{ 'o',		CMOLD,		MNEW,		0 },
-	{ 'u',		CMUNREAD,	MREAD,		0 },
-	{ 'd',		CMDELETED,	MDELETED,	MDELETED },
-	{ 'r',		CMREAD,		MREAD,		MREAD },
-	{ 0,		0,		0,		0 }
+    { COLT_NEW,		CMNEW,		MNEW,		MNEW,		"new" },
+    { COLT_OLD,		CMOLD,		MNEW,		0,		"old" },
+    { DISP_UNRD,	CMUNREAD,	MREAD,		0,		"unread" },
+    { COLT_DEL,		CMDELETED,	MDELETED,	MDELETED,	"deleted" },
+    { DISP_READ,	CMREAD,		MREAD,		MREAD,		"read" },
+    { DISP_FLAG,	CMFLAG,		MFLAG,		MFLAG,		"flagged" },
+    { DISP_REMB,	CMREMEMBER,	MREMEMBER,	MREMEMBER,	"marked" },
+    { DISP_BOTH,	CMBOTHUSER,	MBOTHUSER,	MBOTHUSER,	"marked and flagged" },
+    { COLT_NONE,	CMNOUSER,	MBOTHUSER,	0,		"no marks or flags" },
+    { 0,		0,		0,		0,		"" }
 };
 
 static	int	lastcolmod;
@@ -236,7 +241,7 @@ number:
 		case TOVER:
 		case TUNDER:
 		case TEQUAL:
-			if(lexsizecheck < 0) {
+			if (lexsizecheck < 0) {
 				puts("Need a size value\n");
 				return(-1);
 			}
@@ -285,7 +290,6 @@ number:
 				printf("No applicable messages.\n");
 				return(-1);
 			}
-			return(0);
 			break;
 
 		case TDOLLAR:
@@ -312,8 +316,8 @@ number:
 	}
 	lastcolmod = colmod;
 	*np = NOSTR;
-	mc = 0;
 	if (star) {
+		mc = 0;
 		for (i = 0; i < msgCount; i++)
 			if (f == M_ALL || (message[i].m_flag & MDELETED) == f) {
 				mark(i+1);
@@ -327,9 +331,9 @@ number:
 	}
 
 	/*
-	 * If no numbers were given, mark all of the messages,
-	 * so that we can unmark any whose sender was not selected
-	 * if any user names were given.
+	 * If no numbers were given (or messages selected by size), mark all
+	 * of the messages, so that we can unmark any whose sender was not
+	 * selected if any user names were given.
 	 */
 
 	if ((np > namelist || colmod != 0) && mc == 0)
@@ -392,7 +396,8 @@ number:
 
 			mp = &message[i - 1];
 			for (colp = &coltab[0]; colp->co_char; colp++)
-				if (colp->co_bit & colmod)
+				/* & == to ensure all bits of multibit mods */
+				if ((colp->co_bit & colmod) == colp->co_bit)
 					if ((mp->m_flag & colp->co_mask)
 					    != colp->co_equal)
 						unmark(i);
@@ -406,8 +411,9 @@ number:
 
 			printf("No messages satisfy");
 			for (colp = &coltab[0]; colp->co_char; colp++)
-				if (colp->co_bit & colmod)
-					printf(" :%c", colp->co_char);
+				/* & == to ensure all bits of multibit mods */
+				if ((colp->co_bit & colmod) == colp->co_bit)
+					printf(" :%c (%s)", colp->co_char, colp->co_name);
 			printf("\n");
 			return(-1);
 		}
@@ -726,7 +732,7 @@ scan(sp)
 			  	lexsizeflag = SC_MBYTES;
 				break;
 			  default:
-				fputs("Unknow size check flag\n", stderr);
+				fputs("Unknown size check flag\n", stderr);
 				return(TERROR);
 			}
 
@@ -905,6 +911,8 @@ matchsubj(str, mesg)
 
 /*
  * Mark the named message by setting its mark bit.
+ * This "mark" is used internally for messages to operate on during a
+ * particular action and is completely different from the user command.
  */
 void
 mark(mesg)
@@ -935,6 +943,8 @@ unmark(mesg)
 
 /*
  * Restore saved marks.
+ * This "mark" is used internally for messages to operate on during a
+ * particular action, and the saved marks are accessed via ! history.
  */
 void
 usesavemark(mesg)

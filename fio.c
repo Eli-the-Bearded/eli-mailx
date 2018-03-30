@@ -132,11 +132,17 @@ setptr(ibuf)
 						;
 					if (cp[-1] != ':')
 						break;
-					while ((c = *cp++) != '\0')
+					while ((c = *cp++) != '\0') {
+						/* Unknown characters on Status: 
+						 * get ignored.
+						 */
 						if (c == 'R')
 							this.m_flag |= MREAD;
 						else if (c == 'O')
 							this.m_flag &= ~MNEW;
+						else if (c == '+')
+							this.m_flag |= MFLAG;
+					}
 					inhead = 0;
 					break;
 				}

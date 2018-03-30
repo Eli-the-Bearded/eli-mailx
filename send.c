@@ -308,13 +308,15 @@ statusput(mp, obuf, prefix)
 	FILE *obuf;
 	char *prefix;
 {
-	char statout[3];
+	char statout[STATUS_SIZE];
 	register char *cp = statout;
 
 	if (mp->m_flag & MREAD)
 		*cp++ = 'R';
 	if ((mp->m_flag & MNEW) == 0)
 		*cp++ = 'O';
+	if (mp->m_flag & MFLAG)
+		*cp++ = '+';
 	*cp = 0;
 	if (statout[0])
 		fprintf(obuf, "%sStatus: %s\n",

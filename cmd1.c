@@ -194,17 +194,35 @@ printhead(mesg)
 	 * Bletch!
 	 */
 	curind = dot == mp ? '>' : ' ';
-	dispc = 'r';		/* flag read messages */
+        /* So many dispc symbols now!
+         * Quick summary:
+         *    r: already marked as read
+         *    *: saved to a file this session
+         *    P: flagged to preserve
+         *    u: not marked as read
+         *    M: flagged to save to mbox
+         *    f: user specified message flag (overrider and saved on Status:)
+         *    m: user specified message flag (overrider, but only this session)
+         *    B: BOTH previous user specified message flags
+	 * At least for now; see def.h for changes
+         */
+	dispc = DISP_READ;
 	if (mp->m_flag & MSAVED)
-		dispc = '*';
+		dispc = DISP_SAVE;
 	if (mp->m_flag & MPRESERVE)
-		dispc = 'P';
+		dispc = DISP_PRES;
 	if ((mp->m_flag & (MREAD|MNEW)) == MNEW)
-		dispc = ' ';	/* don't flag new */
+		dispc = DISP_NEW;
 	if ((mp->m_flag & (MREAD|MNEW)) == 0)
-		dispc = 'U';
+		dispc = DISP_UNRD;
 	if (mp->m_flag & MBOX)
-		dispc = 'M';
+		dispc = DISP_MBOX;
+	if (mp->m_flag & MFLAG)
+		dispc = DISP_FLAG;
+	if (mp->m_flag & MREMEMBER)
+		dispc = DISP_REMB;
+	if ((mp->m_flag & MFLAG) && (mp->m_flag & MREMEMBER))
+		dispc = DISP_BOTH;
 	parse(headline, &hl, pbuf);
 
 	subj7line = malloc(LINESIZE);
@@ -664,6 +682,79 @@ stouch(v)
 		/* the touch() used by type1() */
 		touch(dot);
 		dot->m_flag &= ~MPRESERVE;
+	}
+	return(0);
+}
+
+/*
+ * Set the short-term user flag on a message vector.
+ * Called "mark" to the user, but "mark" is used internally for
+ * messages to operate on during a particular action.
+ */
+int
+sremember(v)
+	void *v;
+{
+	int *msgvec = v;
+	register int *ip;
+
+	for (ip = msgvec; *ip != 0; ip++) {
+		dot = &message[*ip-1];
+		flag(dot,FLAGSET,MREMEMBER);
+	}
+	return(0);
+}
+
+/*
+ * Clear the short-term user flag on a message vector.
+ */
+int
+cremember(v)
+	void *v;
+{
+	int *msgvec = v;
+	register int *ip;
+
+	for (ip = msgvec; *ip != 0; ip++) {
+		dot = &message[*ip-1];
+                /* STATUS so it will be saved */
+		flag(dot,FLAGUNSET,MREMEMBER);
+	}
+	return(0);
+}
+
+/*
+ * Set the saved user flag on a message vector.
+ */
+int
+sflag(v)
+	void *v;
+{
+	int *msgvec = v;
+	register int *ip;
+
+	for (ip = msgvec; *ip != 0; ip++) {
+		dot = &message[*ip-1];
+                /* STATUS so it will be saved */
+		flag(dot,FLAGSET,(MFLAG|MSTATUS));
+	}
+	return(0);
+}
+
+/*
+ * Clear the saved user flag on a message vector.
+ */
+int
+cflag(v)
+	void *v;
+{
+	int *msgvec = v;
+	register int *ip;
+
+	for (ip = msgvec; *ip != 0; ip++) {
+		dot = &message[*ip-1];
+                /* STATUS so it will be saved */
+		flag(dot,FLAGUNSET,(MFLAG|MSTATUS));
 	}
 	return(0);
 }

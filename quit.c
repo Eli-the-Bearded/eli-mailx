@@ -116,10 +116,14 @@ quit()
 	 * If editing (not reading system mail box), then do the work
 	 * in edstop()
 	 */
-	if (edit) {
-		edstop();
-		return;
-	}
+	/* Might be a call for edstop() with some other condition, but
+	 * as I use mboxes, it does the wrong thing.		EtB 2018
+	 *
+	 * if (edit) {
+	 *	edstop();
+	 *	return;
+	 * }
+	 */
 
 	/*
 	 * See if there any messages to save in mbox.  If no, we
