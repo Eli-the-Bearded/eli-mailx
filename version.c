@@ -46,4 +46,4 @@ static char rcsid[] = "$OpenBSD: version.c,v 1.4 1996/06/08 19:48:46 christos Ex
  * Just keep track of the date/sid of this version of Mail.
  * Load this file first to get a "total" Mail version.
  */
-char	*version = "etbmail 2018-03-30";
+char	*version = "etbmail 2018-08-24";

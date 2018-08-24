@@ -441,7 +441,7 @@ evalcol(col)
 
 /*
  * Check the passed message number for legality and proper flags.
- * If f is MDELETED, then either kind will do.  Otherwise, the message
+ * If f is MDELETED or M_ALL, then either kind will do.  Otherwise, the message
  * has to be undeleted.
  */
 int
@@ -455,6 +455,9 @@ check(mesg, f)
 		return(-1);
 	}
 	mp = &message[mesg-1];
+	if (f == M_ALL) {
+		return(0);
+	}
 	if (f != MDELETED && (mp->m_flag & MDELETED) != 0) {
 		printf("%d: Inappropriate message\n", mesg);
 		return(-1);
@@ -875,6 +878,10 @@ matchsubj(str, mesg)
 	}
 	str++;
 	if (strlen(str) == 0) {
+                if (stype == HEADERS_MATCH) {
+			/* special case: bare % matches everything */
+			return(1);
+		}
 		str = lastscan;
 	} else {
 		strncpy(lastscan, str, 128);
