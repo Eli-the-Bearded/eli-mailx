@@ -33,6 +33,13 @@
 .\"
 .\"	@(#)mail1.nr	8.1 (Berkeley) 6/8/93
 .\"
+.sh 1 "Maintainer's Note"
+.pp
+This document is long out of date and does not cover many of the newer
+features of this version of the
+.i Mail
+program. I am unlikely to ever update this manual. The regular manpage
+is the source of truth. This is included for historical completeness.
 .sh 1 Introduction
 .pp
 .i Mail
