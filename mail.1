@@ -1022,10 +1022,6 @@ causes
 .Nm mail
 to interpret a period alone on a line as the terminator
 of a message you are sending.
-.It Ar endhlstr
-A suffix to be displayed after headers in the 
-.Ic highlight 
-list.
 .It Ar hold
 This option is used to hold messages in the system mailbox
 by default.
@@ -1072,10 +1068,6 @@ Reverses the sense of
 and
 .Ic Reply
 commands.
-.It Ar RNMAIL
-Holds the name of the external mailer for the
-.Ic Rnmail
-command.
 .It Ar quiet
 Suppresses the printing of the version when first invoked.
 .It Ar searchheaders
@@ -1083,10 +1075,6 @@ If this option is set, then a message-list specifier in the form ``/x:y''
 will expand to all messages containing the substring ``y'' in the header
 field ``x''.  The string search is case insensitive. Regardless of this
 setting, ``%x:y'' will search in this fashion.
-.It Ar starthlstr
-A prefix to be displayed before headers in the 
-.Ic highlight 
-list.
 .It Ar verbose
 Setting the option
 .Ar verbose
@@ -1112,6 +1100,14 @@ Pathname of the directory lister to use in the
 command.
 Default is
 .Pa /bin/ls .
+.It Ev MBOX
+The name of the
+.Ar mbox
+file.
+It can be the name of a folder.
+The default is
+.Dq Li mbox
+in the user's home directory.
 .It Ev PAGER
 Pathname of the program to use in the
 .Ic more
@@ -1121,6 +1117,10 @@ variable is set.
 The default paginator
 .Xr more 1
 is used if this option is not defined.
+.It Ar RNMAIL
+Holds the name of the external mailer for the
+.Ic Rnmail
+command.
 .It Ev SHELL
 Pathname of the shell to use in the
 .Ic \&!
@@ -1135,6 +1135,13 @@ Pathname of the text editor to use in the
 command and
 .Ic \&~v
 escape.
+.It Va charset
+When
+.Va charset
+has the name of a MIME charset, MIME-words in subject headers will
+be decoded for display in the list view if they are a matching charset.
+See RFC-2047 for the full specification but in general they look like
+.Ic =?CHARSET?Q?Some_Content_Here?=
 .It Va crt
 The valued option
 .Va crt
@@ -1148,6 +1155,10 @@ is set without a value,
 then the height of the terminal screen stored in the system
 is used to compute the threshold (see
 .Xr stty 1 ) .
+.It Ar endhlstr
+A suffix to be displayed after headers in the 
+.Ic highlight 
+list.
 .It Ar escape
 If defined, the first character of this option gives the character to
 use in the place of ~ to denote escapes.
@@ -1158,23 +1169,19 @@ If this name begins with a `/',
 .Nm mail
 considers it to be an absolute pathname; otherwise, the
 folder directory is found relative to your home directory.
-.It Ev MBOX
-The name of the
-.Ar mbox
-file.
-It can be the name of a folder.
-The default is
-.Dq Li mbox
-in the user's home directory.
-.It Ar record
-If defined, gives the pathname of the file used to record all outgoing
-mail.
-If not defined, then outgoing mail is not so saved.
 .It Ar indentprefix
 String used by the ``~m'' tilde escape for indenting messages, in place of
 the normal tab character (^I).
 Be sure to quote the value if it contains
 spaces or tabs.
+.It Ar record
+If defined, gives the pathname of the file used to record all outgoing
+mail.
+If not defined, then outgoing mail is not so saved.
+.It Ar starthlstr
+A prefix to be displayed before headers in the 
+.Ic highlight 
+list.
 .It Ar toplines
 If defined, gives the number of lines of a message to be printed out
 with the

@@ -54,6 +54,11 @@ static char rcsid[] = "$OpenBSD: cmd1.c,v 1.5 1996/06/08 19:48:11 christos Exp $
 /*
  * Print the current active headings.
  * Don't change dot if invoker didn't give an argument.
+ *
+ * Takes a vector, uses the first thing in that vector
+ * to find the start of a screen-ful, then ignores the
+ * rest of the vector. Use from() for printing an actual
+ * vector.
  */
 
 static int screen;
@@ -108,6 +113,11 @@ scroll(v)
 	char *arg = v;
 	register int s, size;
 	int cur[1];
+
+	/* screen is the global index of the current page of messages; it will
+	 * be changed if scroll() is successful, then headers is called with
+	 * an empty vector to print current screen.
+	 */
 
 	cur[0] = 0;
 	size = screensize();
@@ -170,6 +180,9 @@ from(v)
 	return(0);
 }
 
+extern int decode_header(char*, char*, int);	/* GREP move to .h */
+extern int check_utf8(char*, int);	/* GREP move to .h */
+extern int display_length(char*, int);	/* GREP move to .h */
 /*
  * Print out the header of a specific message.
  * This is a slight improvement to the standard one.
@@ -180,7 +193,7 @@ printhead(mesg)
 {
 	struct message *mp;
 	char headline[LINESIZE], wcount[LINESIZE], *subjline, dispc, curind;
-	char pbuf[BUFSIZ], *subj7line, bytechar;
+	char pbuf[BUFSIZ], *subj7line, bytechar, *charset;
 	struct headline hl;
 	int subjlen,k,wcl,size_adj;
 	char *name;
@@ -225,7 +238,7 @@ printhead(mesg)
 		dispc = DISP_BOTH;
 	parse(headline, &hl, pbuf);
 
-	subj7line = malloc(LINESIZE);
+	subj7line = malloc(LINESIZE);	/* fix to be static GREPgrep */
 	if(!subj7line) {
 	   (void)fprintf(stderr,"\nOut of memory!\n");
 	   exit(2);
@@ -283,14 +296,54 @@ printhead(mesg)
 	name = value("show-rcpt") != NOSTR ?
 		skin(hfield("to", mp)) : nameof(mp, 0);
 
-	subj7line[subjlen] = 0;
+	if ((charset = value("charset")) != NOSTR) { /* GREPgrep fix document setting */
+		if (subjline == NOSTR || subjlen < 1)
+			/* doesn't actually do much */
+			copy(NO_SUBJECT_PLACEHOLDER, subj7line);
+		else {
+			int bad_at, cut_at;
+			copy(subjline, subj7line);
+			/* decodes in place when decoding anything */
+			decode_header(subj7line, charset, LINESIZE);
+			if(strcasecmp("UTF-8", charset) == 0){
 
-	/* no subject or no space for subject */
-	if (subjline == NOSTR || subjlen < 1)
-		/* hopefully the placeholder is 7bit already, but... */
-		to7strcpy(subj7line, NO_SUBJECT_PLACEHOLDER, subjlen);
-	else {
-		to7strcpy(subj7line, subjline, subjlen);
+				/* clean up bad UTF-8 ... */
+				while(-1 != (bad_at = check_utf8(subj7line, LINESIZE))) {
+				  if(bad_at > (4 * subjlen)) {
+				    /* we're past the end of the subject we
+				     * may display, even if all four-octet
+				     * UTF-8.
+				     */
+				     break;
+				  }
+				  /* GREPgrep uses ~ as in to7strcpy, maybe make setting? */
+				  subj7line[bad_at] = '~';
+				}
+				
+				/* ... because display_length() only works on
+				 * valid UTF-8 and 
+				 *    printf("%.*s", subjlen, subj7line)
+				 * will use a naive truncation.
+				 */
+				cut_at = display_length(subj7line, subjlen);
+				subj7line[cut_at] = 0;
+			} else {
+				/* charset naive truncation */
+				subj7line[subjlen] = 0;
+			}
+
+		}
+	} else {
+		/* go for old 7 bit clean code path */
+
+		/* no subject or no space for subject */
+		if (subjline == NOSTR || subjlen < 1)
+			/* hopefully the placeholder is 7bit already, but... */
+			to7strcpy(subj7line, NO_SUBJECT_PLACEHOLDER, subjlen);
+		else {
+			to7strcpy(subj7line, subjline, subjlen);
+		}
+		subj7line[subjlen] = 0;
 	}
 
 		 
@@ -300,7 +353,7 @@ printhead(mesg)
 	 *              |  | |    (15 char)  / 
 	 *              |  | |       |      /  
 	 *              v  v v       v     v    subject (subjlen char) */
-#define VERY_N_HEADER "%c%4d%c%-15.15s %8.8s %.*s\n"
+#define VERY_N_HEADER "%c%4d%c%-15.15s %8.8s %s\n"
 	/*              ^  ^ ^       ^^    ^
 	 *              1  4 1     15 1    8      = 28 pre-subject  */
 
@@ -310,7 +363,7 @@ printhead(mesg)
 	 *              |  | |    (18 char)  |  /     (4 char)
 	 *              |  | |       |       |  |     
 	 *              v  v v       v       v  v  subject (subjlen char) */
-#define NARROW_HEADER "%c%4d%c%-18.18s %14.14s %s %.*s\n"
+#define NARROW_HEADER "%c%4d%c%-18.18s %14.14s %s %s\n"
 	/*              ^  ^ ^       ^^      ^^ ^^
 	 *              1  4 1     18 1    14 1 4 1= 48 pre-subject  */
 
@@ -320,7 +373,7 @@ printhead(mesg)
 	 *              |  | |    (20 char)  |  /     (9 char)
 	 *              |  | |       |       |  |     
 	 *              v  v v       v       v  v  subject (subjlen char) */
-#define NORMAL_HEADER "%c%4d%c%-20.20s %17.17s %s %.*s\n"
+#define NORMAL_HEADER "%c%4d%c%-20.20s %17.17s %s %s\n"
 	/*              ^  ^ ^       ^^      ^^ ^^
 	 *              1  4 1     20 1    17 1 9 1= 55 pre-subject  */
 
@@ -330,7 +383,7 @@ printhead(mesg)
 	 *            |   | |    (20 char)  |  /     (9 char)
 	 *            |   | |       |       |  |     
 	 *            v   v v       v       v  v  subject (subjlen char) */
-#define WIDE_HEADER "%c %4d%c%-20.20s %17.17s %s %.*s\n"
+#define WIDE_HEADER "%c %4d%c%-20.20s %17.17s %s %s\n"
 	/*            ^^  ^ ^       ^^      ^^ ^^
 	 *           1 1  4 1     20 1    17 1 9 1= 56 pre-subject  */
 
@@ -350,7 +403,7 @@ printhead(mesg)
 		       (screenwidth <  NARROW_SCREEN)? NARROW_HEADER :
 						       NORMAL_HEADER),
 			dispc, mesg, curind, name, use_date, wcount,
-			subjlen, subj7line);
+			subj7line);
 	} else {
 		/* Very narrow */
 		char tersedate[10];
@@ -367,7 +420,7 @@ printhead(mesg)
                 
 		printf(VERY_N_HEADER,
 			dispc, mesg, curind, name, tersedate,
-			subjlen, subj7line);
+			subj7line);
 	}
 
 	free(subj7line);
@@ -717,7 +770,6 @@ cremember(v)
 
 	for (ip = msgvec; *ip != 0; ip++) {
 		dot = &message[*ip-1];
-                /* STATUS so it will be saved */
 		flag(dot,FLAGUNSET,MREMEMBER);
 	}
 	return(0);
