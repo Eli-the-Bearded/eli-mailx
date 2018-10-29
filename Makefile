@@ -4,8 +4,6 @@
 PROG=	mail
 CC=gcc
 
-# use second line starting from hamm release
-#CPPFLAGS=-I/usr/include/bsd -D_BSD_SOURCE -DIOSAFE
 CPPFLAGS=-D_BSD_SOURCE 
 
 # static build
@@ -16,10 +14,18 @@ CFLAGS=-g
 
 SRCS=	version.c aux.c cmd1.c cmd2.c cmd3.c cmdtab.c collect.c no_dot_lock.c \
 	edit.c fio.c getname.c head.c v7.local.c lex.c list.c main.c names.c \
-	popen.c quit.c send.c strings.c temp.c tty.c vars.c
+	popen.c quit.c send.c strings.c temp.c tty.c vars.c mime.c utf-8.c
 
 OBJS=$(SRCS:%.c=%.o)
 LIBS=
+
+CHECKPROGS = checkutf8 check8859 checkascii
+CHECKPROGS_SRCS = checkutf8.c utf-8.c
+CHECKPROGS_OBJS=$(CHECKPROGS_SRCS:%.c=%.o)
+
+TESTPROG = mimetest utf8test
+
+ALL_PROG = $(PROG) $(CHECKPROGS) $(TESTPROG)
 
 SFILES=	mail.help mail.tildehelp
 EFILES=	mail.rc
@@ -28,11 +34,25 @@ MFILES=	mail.1
 
 default: all
 
- all: $(PROG)
+ all: $(PROG) $(CHECKPROGS)
+
+ # limited test suite
+ test: $(TESTPROG)
+	@echo Ran tests for: $>
  
  $(PROG): $(OBJS)
 	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJS) $(LIBS)
  
+ checkutf8: $(CHECKPROGS_OBJS)
+	rm -f $(CHECKPROGS)
+	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(CHECKPROGS_OBJS) $(LIBS)
+
+ check8859: checkutf8
+	ln $> $@
+
+ checkascii: checkutf8
+	ln $> $@
+
  .c.o:
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $<
  
@@ -41,13 +61,24 @@ default: all
 	mv -f $*.tab.c $@
  
  clean:
-	rm -f $(PROG) *.o *~
+	rm -f $(ALL_PROG) *.o *~
  
  install:
 	install -c -m 2755 -o root -g mail -s $(PROG) $(DESTDIR)/usr/bin/
+	install -c -m 755 -o root -g root -s $(CHECKPROGS) $(DESTDIR)/usr/bin/ 
 	install -c -m 644 $(MFILES) $(DESTDIR)/usr/man/man1/
 	cd misc && install -c -m 644 $(EFILES) $(DESTDIR)/etc/
 	cd misc && install -c -m 644 $(SFILES) $(DESTDIR)/usr/lib/
+
+# these two items have a built in test suite
+mimetest: mime.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -D_RUN_TESTS -o $@ mime.c
+	./$@ && echo $@ PASSED ALL TESTS
+
+utf8test: utf-8.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -D_RUN_TESTS -o $@ utf-8.c
+	./$@ && echo $@ PASSED ALL TESTS
+
 
 aux.o: def.h extern.h glob.h rcv.h pathnames.h
 cmd1.o: def.h extern.h glob.h rcv.h pathnames.h
@@ -74,3 +105,8 @@ tty.o: def.h extern.h glob.h rcv.h pathnames.h
 v7.local.o: def.h extern.h glob.h rcv.h pathnames.h
 vars.o: def.h extern.h glob.h rcv.h pathnames.h
 # version.o has no dependencies on non-system includes
+
+# checkutf8.o has no dependencies on non-system includes
+# mime.o has no dependencies on non-system includes
+# utf-8.o has no dependencies on non-system includes
+
