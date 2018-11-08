@@ -78,6 +78,7 @@ main(argc, argv)
 	char *ef;
 	char *ef_var;
 	char *cmdoption;
+	char *espot;
 	char nosrc = 0;
 	sig_t prevint;
 
@@ -120,7 +121,7 @@ main(argc, argv)
 	smopts = NIL;
 	subject = NOSTR;
 	shown_eof = 0;
-	while ((i = getopt(argc, argv, "INT:b:c:dF:fins:u:ve:")) != EOF) {
+	while ((i = getopt(argc, argv, "INT:b:c:dF:finS:s:u:ve:")) != EOF) {
 		switch (i) {
 		case 'T':
 			/*
@@ -155,6 +156,20 @@ main(argc, argv)
 			break;
 		case 'd':
 			debug++;
+			break;
+		case 'S':
+			/* copied from nail: enable 'set'tings on
+			 * command line:
+			 *    -S variable[=value]
+			 */
+			espot = strchr(optarg, '=');
+			if (espot) {
+			  *espot = 0;
+			  espot++;
+			  assign(optarg, espot);
+			} else {
+			  assign(optarg, "");
+			}
 			break;
 		case 's':
 			/*
@@ -231,10 +246,11 @@ main(argc, argv)
 			break;
 		case '?':
 			fputs("\
-Usage: mail [-iInv] [-s subject] [-c cc-addr] [-b bcc-addr] to-addr ...\n\
-            [- sendmail-options ...]\n\
-       mail [-iInNv] [-e command] -f [name]\n\
-       mail [-iInNv] [-e command] [-u user]\n",
+Usage: mail [-iInv] [-S var[=value]] [-s subject] [-c CCaddr] [-b BCCaddr]\n\
+	    to-addr... [ - sendmail-options ]\n\
+       mail [-iInNv] [-S var[=value]] [-e command] -f [name]\n\
+       mail [-iInNv] [-S var[=value]] [-e command] [-F boxvar]\n\
+       mail [-iInNv] [-S var[=value]] [-e command] [-u user]\n",
 				stderr);
 			exit(1);
 		}

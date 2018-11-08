@@ -41,21 +41,25 @@
 .Sh SYNOPSIS
 .Nm mail
 .Op Fl iInv
+.Op Fl S Ar var[=value]
 .Op Fl s Ar subject
 .Op Fl c Ar cc-addr
 .Op Fl b Ar bcc-addr
 .Ar to-addr...
 .Nm mail
 .Op Fl iInNv
+.Op Fl S Ar var[=value]
 .Op Fl e Ar command
 .Fl f
 .Op Ar name
 .Nm mail
 .Op Fl iInNv
+.Op Fl S Ar var[=value]
 .Op Fl e Ar command
 .Op Fl F Ar boxvar
 .Nm mail
 .Op Fl iInNv
+.Op Fl S Ar var[=value]
 .Op Fl e Ar command
 .Op Fl u Ar user
 .Sh INTRODUCTION
@@ -90,6 +94,13 @@ upon startup.
 .It Fl N
 Inhibits the initial display of message headers
 when reading mail or editing a mail folder.
+.It Fl S
+Acts as if a
+.Ar set
+for
+.Ar var[=value]
+had been seen in a start-up RC file, except that backticks are not
+executed. Can be used more than once.
 .It Fl s
 Specify subject on command line
 (only the first argument after the
@@ -107,7 +118,7 @@ List should be a comma-separated list of names.
 .It Fl e
 When reading mail, execute the
 .Ar command
-as if it were the first interactive input.
+as if it were the first interactive input. (Can only be used once.)
 .It Fl f
 Read in the contents of your
 .Ar mbox

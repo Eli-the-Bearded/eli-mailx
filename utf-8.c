@@ -242,7 +242,7 @@ check_charset(charset, str, len)
 /*
  * for a valid utf-8 string str and a desired character count len,
  * return the number of bytes from the string to print.
- * expects a null terminate utf-8 string, and returns a value 
+ * expects a null terminated utf-8 string, and returns a value 
  *    betweeen len and 4 x len
  *    or strlen(str) if that's less than len
  *    or -1 if invalid null-terminated utf-8 is discovered
