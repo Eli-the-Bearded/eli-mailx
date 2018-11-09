@@ -720,11 +720,18 @@ ifcmd(v)
 	/* if etbmail
 	 *	stuff nail will ignore
 	 * endif
-	 * The else command is unusable for this case, since nail does not
-         * recognize the condition.
          */
 	case 'e': case 'E':
-		cond = CANY;
+		cond = CETBMAIL;
+		break;
+
+	/* if heirloom
+	 *	stuff we will ignore
+	 *	but my "heirloom" mailx (nail 12+) will process
+	 * endif
+         */
+	case 'h': case 'H':
+		cond = CHEIRLOOM;
 		break;
 
 	/* if reading
@@ -765,9 +772,17 @@ elsecmd(v)
 
 	switch (cond) {
 	case CANY:
-		/* no 'if' at all or 'if etbmail' */
+		/* no 'if' at all */
 		printf("\"Else\" outside of suitable \"if\"\n");
 		return(1);
+
+	case CETBMAIL:
+		cond = CHEIRLOOM;
+		break;
+
+	case CHEIRLOOM:
+		cond = CETBMAIL;
+		break;
 
 	case CSEND:
 		cond = CRCV;

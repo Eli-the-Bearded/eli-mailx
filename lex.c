@@ -307,7 +307,15 @@ execute(linebuf, contxt)
 		return(0);
 	com = lex(word);
 	if (com == NONE) {
+		if (cond == CHEIRLOOM) {
+			/* ignore heirloom only bogus commands */
+			return(0);
+		}
 		printf("Unknown command: \"%s\"\n", word);
+		/* Clear any conditional, since we'll no longer be
+		 * able to see the else or endif.
+		 */
+		cond = CANY;
 		goto out;
 	}
 
@@ -317,7 +325,9 @@ execute(linebuf, contxt)
 	 */
 
 	if ((com->c_argtype & F) == 0)
-		if ((cond == CRCV && !rcvmode) || (cond == CSEND && rcvmode))
+		if ((cond == CRCV && !rcvmode) ||
+		    (cond == CSEND && rcvmode) ||
+		    (cond == CHEIRLOOM))
 			return(0);
 
 	/*

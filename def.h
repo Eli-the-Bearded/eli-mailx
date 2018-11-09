@@ -284,6 +284,8 @@ struct ignoretab {
 #define	CANY		0		/* Execute in send or receive mode */
 #define	CRCV		1		/* Execute in receive mode only */
 #define	CSEND		2		/* Execute in send mode only */
+#define CHEIRLOOM	5		/* We never execute */
+#define CETBMAIL	6		/* We always execute */
 
 /*
  * Kludges to handle the change from setexit / reset to setjmp / longjmp
