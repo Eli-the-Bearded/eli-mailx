@@ -154,30 +154,136 @@ overf:
 }
 
 /*
+ * Figure out which file has the requested help.
+ */
+static char *
+find_help(topic)
+	const char *topic;
+{
+	char *helpfile, *n, *stopic;
+	char hname[PATHSIZE];
+	int usedhf = 0;
+	struct stat sbuf;
+
+	if ((helpfile = value("helpfile")) == NOSTR) {
+		helpfile = savestr(_PATH_HELP);
+	} else {
+		helpfile = savestr(helpfile);
+		usedhf = 1;
+	}
+
+	if (topic == NULL) 
+		return helpfile;
+
+	stopic = savestr(topic);
+	/* avoid bad user input */
+	for (n = stopic; *n != 0; n++) {
+		if ((*n >= 'a') && (*n <= 'z')) { return NOSTR; }
+		if ((*n >= 'A') && (*n <= 'Z')) { return NOSTR; }
+		if ((*n >= '0') && (*n <= '9')) { return NOSTR; }
+		if (*n == '!') { return NOSTR; }
+		if (*n == '#') { return NOSTR; }
+		if (*n == '=') { return NOSTR; }
+		if (*n == '?') { return NOSTR; }
+		if (*n == '-') { return NOSTR; }
+	}
+	
+	snprintf(hname, PATHSIZE, "%s.%s", helpfile, stopic);
+	if (0 == stat(hname, &sbuf)) {
+		helpfile = savestr(hname);
+		return helpfile;
+	}
+
+	if(usedhf) {
+		snprintf(hname, PATHSIZE, "%s.%s", _PATH_HELP, stopic);
+		if (0 == stat(hname, &sbuf)) {
+			helpfile = savestr(hname);
+			return helpfile;
+		}
+	}
+
+	return NOSTR;
+}
+
+/*
  * Print out a nice help message from some file or another.
  */
 
+jmp_buf	pagerstop;
 int
 help(v)
 	void *v;
 {
-	register c;
-	register FILE *f;
-	char *alt_help;
+	FILE *f, *pager;
+	char *use_help, **arglist, *topic;
+	char helpbuf[LINESIZE];
+	int s = 0;
 
-	if((alt_help = value("helpfile")) != NOSTR) {
-	  if ((f = Fopen(alt_help, "r")) == NULL) {
-		  perror(alt_help);
-		  return(1);
-	  }
+	arglist = v;
+	topic = *arglist;
+
+	if (topic != NOSTR) {
+		const struct cmd *command = lex(topic);
+		if(command != NONE) {
+			/* What can we say about this based on cmdtab? */
+			s = snprintf(helpbuf, LINESIZE, 
+				"\"%s\" is a built-in command", command->c_name);
+
+			if((command->c_argtype & 07) == 0)
+				s += snprintf(&helpbuf[s], LINESIZE,
+					" which takes a message-list.");
+			if((command->c_argtype & 07) == 1)
+				s += snprintf(&helpbuf[s], LINESIZE,
+					" which takes a message-list plus a string.");
+			if((command->c_argtype & 07) == 2)
+				s += snprintf(&helpbuf[s], LINESIZE,
+					" which takes %d to %d parameters.",
+					command->c_minargs, command->c_maxargs);
+			if((command->c_argtype & 07) == 3)
+				s += snprintf(&helpbuf[s], LINESIZE,
+					" which takes no parameters.");
+			if((command->c_argtype & 07) == 4)
+				s += snprintf(&helpbuf[s], LINESIZE,
+					" which takes a message-list without defaults.");
+			s += snprintf(&helpbuf[s], LINESIZE, "\n");
+
+			if(command->c_argtype & I)
+				s += snprintf(&helpbuf[s], LINESIZE,
+					"It is only valid in interactive mode.\n");
+			if((command->c_argtype & M) == 0)
+				s += snprintf(&helpbuf[s], LINESIZE,
+					"It cannot be used in mail-send mode.\n");
+
+			use_help = find_help(command->c_name);
+		} else {
+			use_help = find_help(topic);
+		}
+		if (use_help == NOSTR) {
+			if (s)
+				puts(helpbuf);
+			printf("No%s help on %s\n", (s ? " other" : ""), topic);
+			return 1;
+		}
 	} else {
-	  if ((f = Fopen(_PATH_HELP, "r")) == NULL) {
-		  perror(_PATH_HELP);
-		  return(1);
-	  }
+		use_help = find_help(NULL);
 	}
-	while ((c = getc(f)) != EOF)
-		putchar(c);
+
+	
+	if ((f = Fopen(use_help, "r")) == NULL) {
+		perror(use_help);
+		return(1);
+	}
+	if (!setjmp(pagerstop)) {
+		pager = Pageropen();
+		if (s)
+			fputs(helpbuf, pager);
+		while (readline(f, helpbuf, LINESIZE) >= 0) {
+			fputs(helpbuf, pager);
+			/* readline() eats the new lines */
+			putc('\n', pager);
+		}
+	}
+	Pagerclose(pager);
 	Fclose(f);
 	return(0);
 }
@@ -613,13 +719,34 @@ file(v)
 	char **argv = v;
 
 	if (argv[0] == NOSTR) {
-		newfileinfo();
+		newfileinfo(SHOW_PREVIOUS);
 		return 0;
 	}
 	if (setfile(*argv) < 0)
 		return 1;
-	announce();
+	announce(HIDE_PREVIOUS);
 	return 0;
+}
+
+/*
+ * Just like file, but uses a variable for the filename.
+ */
+int
+File(v)
+	void *v;
+{
+	char **argv = v;
+	char *filename;
+
+	if (argv[0] != NOSTR) {
+		filename = value(argv[0]);
+		if (filename == NOSTR) {
+			printf("Could not expand %s\n", argv[0]);
+			return 1;
+		}
+		return file(&filename);
+	}
+	return file(v);
 }
 
 /*
