@@ -60,12 +60,13 @@ Some things to know about my mail set-up:
 
 * I prefer to deal with MIME mail with `procmail` rules during delivery,
   so the stuff that makes it to my inbox has path names to extracted
-  files added as a MIME prefix.
+  files added as a MIME prefix. See procmail.d/ for example recipes.
 
-* My version of `Rnmail` (not in this distribution for privacy reasons)
-  has rules for determining the "From" address I will use and parses
-  out the address from the headers to use as envelope from address
-  when invoking `sendmail`.
+* My version of `Rnmail` has rules for determining the "From" address
+  I will use and parses out the address from the headers to use as
+  envelope from address when invoking `sendmail`. While my exact version
+  is not in this distribution for privacy reasons, an example version is
+  in rnmail.d/
   * I use separate email addresses for basically all non-personal email.
   * This facilitates sorting and makes address shaing obvious.
   * My Github address, my Wikipedia address, my Amazon address, etc, are
