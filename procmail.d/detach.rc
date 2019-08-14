@@ -1,0 +1,29 @@
+# a procmailrc file to deal with attachments
+# 2018 streamlined version of 1999 original
+# and now with web links!
+
+WEBURI=mail/attachments
+WEBMAIL=$HOME/public_html/$WEBURI
+WEBHOST=mail.example.com
+BASEDIR="$WEBMAIL/%Y%m%d-%#"
+
+:0
+* ^Content-Type:.*multipart/
+{
+
+# Don't let dumper and the cat below run at the same time.
+LOCKFILE=$HOME/.wait-for-mimedump
+PID=$$
+
+# Do the dump and grab the output directory
+SAVEDIR=`/usr/bin/nice $HOME/scripts/mimedump -f 701,604 -u $WEBMAIL/=https://$WEBHOST/$WEBURI/ -d -r -a -o mimedump-$PID.out $BASEDIR`
+
+# list detached files in new header
+ATTACHFILES=`cat $SAVEDIR/mimedump-$PID.out`
+:0hfw
+| formail -a "X-Attachments: $ATTACHFILES"
+
+LOCKFILE=
+# That's it. We are done.
+
+}

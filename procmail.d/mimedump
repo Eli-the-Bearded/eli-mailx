@@ -1,0 +1,1313 @@
+#!/usr/bin/perl -Tw
+# Takes a template directory on the command line and
+# a MIME message on stdin and dumps it in parts to the
+# directory.
+#
+# Sample template:
+#	 /home/user/mail/attachments/%Y%m%d-%#
+#
+# Expansions available in templates:
+#
+#       everything strftime() gives you, plus:
+#	%#	a number to make the directory unique
+#
+# Benjamin Elijah Griffin	20 July 2001
+
+use strict;
+use File::NFSLock;
+use File::Path;         # for a portable `mkdir -p`: mkpath()
+use POSIX qw( strftime );
+use MIME::Base64;
+use MIME::QuotedPrint;
+
+use vars qw( $template
+             $dir $lock $level $message %levelpart
+             %default $REmimeval $REextension $REfilename $REpath $REtmpldir
+	     $VERSION );
+
+$VERSION = '0.90';
+
+%default = (
+  # When no content-type specified, consider it this.
+  contenttype        => "text/plain",
+
+  # Prefixes of output files with internally generated names
+  headerprefix       => "headers",
+  mimepreambleprefix => "mimepreamble",
+  mimeepilogueprefix => "mimeepilogue",
+  partprefix         => "part",
+
+  # Print all parts? Headers, mime preamble and epilogue, part headers...
+  printall         => 0,
+
+  # Recurse into message/* parts?
+  messagerecurse   => 0,
+
+  # If recursing the MIME structure, add extra indentation per recurse level
+  indentperlevel   => '  ',
+
+  # Maximum length for a filename (including extension)
+  filenamelength   => 80,
+
+  # Print warnings?
+  showwarnings     => 0,
+
+  # Don't overwrite existing files
+  noclobber        => 0,
+
+  # Suppress printing filenames?
+  quiet            => 0,
+
+  # force mode on created files / last directory?
+  forcemode        => '',
+
+  # filepath to url on output?
+  pathrenamer      => undef,
+
+  # Use index() to split up the message?
+  useindexsplit    => 1,
+);
+
+# Match and capture in $1 a filename extension (with the '.').
+$REextension = qr/(\.[a-z0-9]{1,7})$/i;
+
+# Match and capture in $1 a filename (ignoring length).
+$REfilename  = qr/^([a-z\d][a-z\d\._-]*)$/i;
+
+# Untaint command line path names
+$REpath      = qr:^([^<>'"&;!`\$]+)$:;
+$REtmpldir   = qr:^(\.?/[^<>'"&;!`\$]+|\./*)$:;
+
+# For "foo='bar'" in headers, match the equals and the value,
+# capturing the value ($+ will be used to grab the value).
+$REmimeval   = qr{\s* = \s*		# allow whitespace
+                    (?:
+		      "([^"]+)"		# double quoted
+		     |'([^']+)'		# single quoted
+		     |(\S+)		# missing or broken quotes
+		    )
+		    (?:
+		      \s
+		     |;
+		     |$
+		    )
+	        }x;
+
+# Prototypes {
+sub usage($$);
+sub THEEND ($);
+sub dosighandlers();
+sub expandcreate($);
+sub process($);
+sub fileinfo($$);
+sub forceuniq($$);
+sub forcemode($);
+sub pickname($$;$);
+sub pickext($);
+sub checklen($);
+sub cleanse($$$);
+sub dumpheaders($$$);
+sub dumpbody($$$);
+sub mkextmap();
+sub mylock($);
+sub myunlock($);
+# } end prototypes
+
+# Initialization {
+$level = 0;
+mkextmap();
+
+if (!defined($ENV{HOSTNAME})) {
+  # Needed by File::NFSLock
+  $ENV{PATH} = '/bin:/usr/bin:/usr/ucb:/sbin:/usr/sbin';
+  if(open(HOST, "hostname|")) {
+    $_ = <HOST>;
+    s/\s+//g;
+    $ENV{HOSTNAME} = $_;
+  } else {
+    die "$0: cannot find HOSTNAME, set environment variable please\n";
+  }
+}
+# } end inits
+
+# Argument handling {
+while(defined($ARGV[0]) and $ARGV[0] =~ /^--(.*)|^-(.+)/) {
+  my $arg      = $+;
+  my $savedarg = $ARGV[0];
+  my $val      = undef;
+
+  shift;
+
+  # deal with '--'
+  if ($arg eq '') {
+    last;
+  }
+
+  # deal with '--foo=bar' for '--foo bar'
+  if ($arg =~ s/=(.+)//) {
+    $val = $1;
+  }
+  
+  if ($arg eq 'h' or $arg eq 'help') {
+    usage(0, undef);
+  } elsif ($arg eq 'V' or $arg eq 'version') {
+    print "$0: version $VERSION\n";
+    exit(0);
+  } elsif ($arg eq 'o' or $arg eq 'output') {
+
+    if (defined($val)) {
+      $default{outfile} = $val;
+    } elsif (defined($ARGV[0])) {
+      $val = $default{outfile} = shift;
+    } else {
+      usage(2, "-o / --output needs a filename");
+    }
+
+    if($default{outfile} =~ m:$REpath:) {
+      $default{outfile} = $1; # untaint
+    } else {
+      die "$0: Can't untaint '$val'\n";
+    }
+
+  } elsif ($arg eq 'f' or $arg eq 'forcemode') {
+
+    if (defined($val)) {
+      $default{forcemode} = $val;
+    } elsif (defined($ARGV[0])) {
+      $val = $default{forcemode} = shift;
+    } else {
+      usage(2, "-o / --forcemode needs mode info");
+    }
+
+    if($default{forcemode} =~ m%([0-7]?[0-7][0-7][0-7](?:,[0-7]?[0-7][0-7][0-7])?)%) {
+      $default{forcemode} = $1; # untaint
+    } else {
+      die "$0: Can't untaint '$val'\n";
+    }
+
+  } elsif ($arg eq 'u' or $arg eq 'url') {
+
+    if (defined($val)) {
+      $default{pathrenamer} = $val;
+    } elsif (defined($ARGV[0])) {
+      $val = $default{pathrenamer} = shift;
+    } else {
+      usage(2, "-u / --url needs substitution info");
+    }
+
+    # /home/basdfasdf/mail/webfoo/=http://basd.asdf/mail/foo/
+    if($default{pathrenamer} =~ m%((?:/[a-z0-9][a-z0-9._-]*)+/)=((?:/*[a-z0-9][a-z0-9._:-]*)+/)%i) {
+      $default{pathrenamer} = [$1, $2]; # untaint
+    } else {
+      die "$0: Can't untaint '$val'; needs to be in /foo/bar/=something/bar/ form\n";
+    }
+
+  } elsif ($arg eq 'a' or $arg eq 'all') {
+    $default{printall} = 1;
+  } elsif ($arg eq 'd' or $arg eq 'showdir') {
+    $default{showdir} = 1;
+  } elsif ($arg eq 'v' or $arg eq 'verbose') {
+    $default{showwarnings} = 1;
+  } elsif ($arg eq 'q' or $arg eq 'quiet') {
+    $default{quiet} = 1;
+  } elsif ($arg eq 'c' or $arg eq 'noclobber') {
+    $default{noclobber} = 1;
+  } elsif ($arg eq 'r' or $arg eq 'recurse') {
+    $default{messagerecurse} = 1;
+  } elsif ($arg eq 's' or $arg eq 'split') {
+    $default{useindexsplit} = 0;
+  } else {
+    print STDERR "$0: '$savedarg' unrecognized argument. Use --help for help\n";
+    exit(2);
+  }
+} # while ARGV
+
+$template = shift;
+if (!defined($template)) {
+  usage(2, 'no template provided');
+}
+
+if ($template =~ m:$REtmpldir:) {
+  $template = $1; # untainted
+} else {
+  die "$0: Can't untaint '$template'\n";
+}
+# } end arg handling
+
+# Main functionality {
+dosighandlers();
+$dir = &expandcreate($template);
+$default{workdir} = $dir;
+
+if ($default{showdir}) {
+  print "$dir\n";
+}
+
+if (defined($default{outfile})) {
+  my $file = $default{outfile};
+
+  if ($file !~ m:^/:) {
+    $file = "$dir/$file";
+  }
+
+  if ($file =~ m:$REtmpldir:) {
+    $file = $1; # untaint
+  } else {
+    die "$0: Can't untaint '$file'\n";
+  }
+
+  if(!open(OUTPUT, ">$file")) {
+    die "$0: Can't open output file $file: $!\n";
+  } else {
+    select(OUTPUT);
+  }
+}
+
+undef($/);
+$message = <>;
+process(\$message);
+
+exit(0);
+# } main functionality
+
+# FUNCTIONS FOLLOW
+
+# The main, recursive, function to extract data from a MIME message.
+sub process($) {
+  my $messref = shift;
+  my ( $boundary, $type, $filename, $encoding, $header, @headers, $line,
+       $outfile, $name );
+  
+  my $cwd = $default{workdir};
+  $line = 1;
+  $encoding = 'none';
+
+  while($$messref =~ s/\A([^: \t\n]+.+|[ \t]+.*)\n//) {
+    $header = $1;
+    if ($header =~ /^\s/) {
+      $headers[-1] .= "\n$header";
+    } else {
+      push(@headers, $header);
+    }
+    $line ++;
+  } # while finding headers
+
+  if($$messref =~ s/\A\n//) {
+    # good, good.
+    $line ++;
+  } else {
+    warn "$0: level $level, header parse error line $line not blank.\n";
+  }
+
+  if ($default{printall}) { 
+    $outfile = dumpheaders($cwd, $level, \@headers);
+    fileinfo($level, $outfile);
+  }
+
+  for $header (@headers) {
+    if ($header =~ /^content-type:(.+)/is) {
+      my $rawtype = $1;
+      if ($rawtype =~ s:^\s*([a-z0-9.-]+/[a-z0-9.-]+)::i) {
+        $type = lc($1);
+      } else {
+        $type = $default{contenttype};
+	warn "$0: level $level, can't parse content-type, using default\n";
+      }
+
+      if ($type =~ m:^multipart/:) {
+        if($rawtype =~ s{ (?:\s*;\s*)? \b boundary $REmimeval }{}xi) {
+	  $boundary = $+;
+	} else {
+	  if ($$messref =~ m/\n--(.+)\n/) {
+	    warn "$0: level $level, can't find boundary; guessing\n";
+	    $boundary = $+;
+	  } else {
+	    warn "$0: level $level, can't find boundary; just extracting\n";
+	  }
+	}
+      } elsif ($rawtype =~ s{ (?:\s*;\s*)? \b (?:file)?name $REmimeval }{}xi) {
+	# Allow Content-Disposition: attachment; name=foo to override
+        if (!defined($filename)) {
+	  $filename = $+;
+	}
+      }
+    } # content-type
+    elsif ($header =~ /^content-disposition:(.+)/is) {
+      my $hval = $1;
+
+      if ($hval =~ s{ (?:\s*;\s*)? \b (?:file)?name $REmimeval }{}xi) {
+	  $filename = $+;
+      }
+
+    } # content-disposition
+
+    # Other possible values include 7bit, 8bit; they get processed
+    # the same as the default 'none' though.
+    elsif ($header =~ /^content-transfer-encoding:\s*
+                        (base64|quoted-print[ai]ble)/ix) {
+      # "base64" or "quoted"
+      $encoding = lc(substr($1, 0, 6));
+    } # content-transfer-encoding
+  } # for $header (@headers)
+
+  if(!defined($type)) {
+    $type = $default{contenttype};
+    warn "$0: level $level, can't find content-type, using default\n";
+  }
+
+  if (!defined($boundary)) {
+    if (!defined($filename)) {
+      $filename = pickname($level, $type);
+    } else {
+      $filename = forceuniq($cwd, cleanse($level, $filename, $type));
+    }
+    $outfile = dumpbody($encoding, "$cwd/$filename", $messref);
+    fileinfo($level, $outfile);
+    if($default{messagerecurse} and $type =~ /^message/) {
+      $level ++;
+      process($messref);
+      $level --;
+    }
+  } # if !boundary
+  else {
+    my $part = '';
+    my $mline;
+
+    if ($default{useindexsplit}) {
+      my $pos;
+
+      if (($pos = index($$messref, "\n--$boundary")) >= 0 ) {
+	$part = substr($$messref, 0, $pos+1, '');
+      } else {
+	warn "$0: did not find initial $boundary\n";
+      }
+
+      $$messref =~ s/^-*\Q$boundary\E-*\s*$//;
+
+      if (length($part)) {
+	if ($default{printall}) {
+	  $name = pickname($level, 'preamble', $default{mimepreambleprefix});
+	  $outfile = dumpbody('none', "$cwd/$name", \$part);
+	  fileinfo($level, $outfile);
+	}
+	$part = '';
+      }
+
+      while(($pos = index($$messref, "\n--$boundary")) >= 0) {
+	$part = substr($$messref, 0, $pos+1, '');
+	$$messref =~ s/^-*\Q$boundary\E-*\s*$//;
+	if (length($part)) {
+	  process(\$part);
+	  $part = '';
+	}
+      }
+
+      $part = $$messref;
+    } else {
+      # Don't use index split, use RE split. (Much slower, but more flexible.)
+
+      # Find first boundary
+      while($$messref =~ s/\A(.*\n)//) {
+        $mline = $1;
+        if($mline =~ /^-*\Q$boundary\E-*\s*$/) {
+          if (length($part)) {
+            if ($default{printall}) { 
+              $name = pickname($level, 'preamble', $default{mimepreambleprefix});
+              $outfile = dumpbody('none', "$cwd/$name", \$part);
+              fileinfo($level, $outfile);
+            }
+            $part = '';
+          }
+          last;
+        } else {
+          $part .= $mline;
+        }
+      } # while messref (first boundary)
+    
+      # Find additional boundaries
+      while($$messref =~ s/\A(.*\n)//) {
+        $line = $1;
+        if($line =~ /^-*\Q$boundary\E-*\s*$/) {
+          if (length($part)) {
+            process(\$part);
+            $part = '';
+          }
+        } else {
+          $part .= $line;
+        }
+      } # while messref (additional boundaries)
+    }
+
+    if (length($part)) {
+      if ($default{printall}) { 
+	$name = pickname($level, 'epilogue', $default{mimeepilogueprefix});
+	$outfile = dumpbody('none', "$cwd/$name", \$part);
+	fileinfo($level, $outfile);
+      }
+    }
+
+  } # if $boundary
+
+} # end &process
+
+# Expand a directory template, build directory path for it, and
+# return the directory created. Dies upon failure.
+sub expandcreate($) {
+  my $tmpl = shift;
+  my $basedir;
+  my $dir;
+  my $num = 0;
+
+  $basedir = $tmpl;
+  $basedir =~ s:/[^/]*[%].*::;
+
+  $tmpl =~ s:/+:/:g;
+  $tmpl =~ s:%#:\cA:g;
+
+  $tmpl = strftime($tmpl, localtime);
+  $dir = $tmpl;
+
+  if ($dir =~ /\cA/) {
+    $lock = "$basedir/.lock$>";
+    mylock($lock);
+    
+    while ($dir =~ /\cA/) {
+      $num ++;
+      $dir =~ s/\cA/$num/g;
+
+      if (-d $dir or -f $dir) {
+	$dir = $tmpl;
+	next;
+      }
+
+      mkpath([$dir],0,0777);
+      myunlock($lock);
+      $lock = undef;
+    }
+  } else {
+      mkpath([$dir],0,0777);
+  }
+
+  if (!-d $dir) {
+    die "$0: Can't create directory $dir\n";
+  }
+  forcemode($dir) if $default{forcemode};
+
+  return($dir);
+} # end &expandcreate
+
+
+# Signal handler for fatal signals.
+sub THEEND ($) {
+  my $sig = (shift or '(unknown)');
+  if(defined($lock) and (-f $lock)) {
+    myunlock($lock);
+  }
+
+  if ($sig !~ /^[A-Z\d]+$/) {
+    # __DIE__ or the like
+    $sig =~ s/\s+/ /g;
+    die "$0: Got DIE: '$sig' ... exiting\n";
+  } else {
+    die "$0: Got SIG$sig ... exiting\n";
+  }
+} # end &THEEND 
+
+# Signal handler for warnings.
+sub WARN ($) {
+  my $warning = (shift or '(unknown)');
+
+  if ($default{showwarnings}) {
+    print STDERR $warning;
+  }
+} # end &WARN 
+
+# Installs the signal handlers.
+sub dosighandlers() {
+  $SIG{INT}      = 'main::THEEND';	# <ctrl-c>
+  $SIG{QUIT}     = 'main::THEEND';	# <ctrl-\>
+  $SIG{TERM}     = 'main::THEEND';	# plain 'kill'
+  $SIG{HUP}      = 'main::THEEND';	# hang-up signal
+  $SIG{__DIE__}  = 'main::THEEND';	# die()
+  $SIG{__WARN__} = 'main::WARN';	# warn()
+} # end &dosighandlers
+
+
+# For a MIME type, try to find a suitable filename extension.
+# Returns the extension (with the dot) or an empty string.
+sub pickext($) {
+  my $type = lc(shift);
+  my $ext;
+
+  if(defined($ext = $default{ext}{$type})) {
+    return ".$ext";
+  }
+
+  # Change "text/x-foobar" to "text/*"
+  $type =~ s:/.*:/*:;
+
+  if(defined($ext = $default{ext}{$type})) {
+    return ".$ext";
+  }
+
+  if(defined($ext = $default{ext}{default})) {
+    return ".$ext";
+  }
+
+  return "";
+} # end &pickext
+
+
+# Attempts to sanitize (and untaint) a filename. Generates a new
+# filename if it cannot. Returns the clean filename.
+sub cleanse($$$) {
+  my $level = shift;
+  my $input = shift;
+  my $type  = shift;
+  my $class;
+
+  # only simple names ok as-is
+  if ($input =~ /$REfilename/i) {
+    return(checklen($1)); # untaint
+  }
+
+  $input =~ s:.*/\.*([^/]*):$1:;
+  $input =~ s:[^a-z\d\._ -]+::ig;
+  $input =~ s:\s+:-:g;
+
+  if ($input =~ /$REfilename/i) {
+    return(checklen($1)); # untaint
+  }
+
+  $class = $type;
+  $class =~ s:/.*::;
+
+  return pickname($level, $type, $class);
+} # end &cleanse
+
+# Many messages have identical default names for, say, inlined images.
+# Deal with that.
+sub forceuniq($$) {
+  my $dir  = shift;
+  my $name = shift;
+  my $num;
+
+  # increment every time, even if no conflict
+  $num = ++$levelpart{attach_number};
+  
+  while(-f "$dir/$name") {
+    $num = sprintf("%04d", $num);
+
+    if((length($num) + length($name) + 1) <= $default{filenamelength}) {
+      # simple case, filename not overly long
+      $name =~ s/(.)((?:[.][^.]+)?)$/$1,$num$2/;
+    } else {
+      # nasty case, overwrite part of filename
+      my $block = '.' x (length($num));
+      
+      $name =~ s/(.)(?:.$block)((?:[.][^.]+)?)$/$1,$num$2/;
+    }
+  }
+
+  return $name;
+} # end &forceuniq
+
+# Prints out a filename, with indentation / url rename; fixes filemodes
+sub fileinfo ($$) {
+  my $level = shift;
+  my $name = shift;
+
+  if (!defined($name)) {
+    return;
+  }
+  forcemode($name) if($default{pathrenamer});
+
+  if ($default{quiet}) {
+    return;
+  }
+
+  $name =~ s://+:/:g;
+
+  if($default{pathrenamer}) {
+    $name =~ s/^\Q$default{pathrenamer}[0]\E/$default{pathrenamer}[1]/;
+  }
+
+  if (defined($default{indentperlevel})) {
+    $level = $default{indentperlevel} x $level;
+  }
+
+  print "\t$level$name\n";
+} # end &fileinfo 
+
+
+# Generates and returns a filename (without directory). The mime
+# type is used to try to find a suitable extension.
+sub pickname ($$;$) {
+  my $level = shift;
+  my $type  = shift;
+  my $pre   = (shift || $default{partprefix});
+  my $dir   = $default{workdir};
+
+  my $seq = ($levelpart{$level} || 0);
+  $levelpart{$level} = $seq + 1;
+
+  return "$pre-$$-${level}_$seq" . pickext($type);
+} # end &pickname
+
+
+# Returns a version of the provided filename that is no longer
+# than the maximum length. The filename is shortened from the
+# end, with an attempt to preserve the extension.
+sub checklen($) {
+  my $name = shift;
+
+  if(length($name) > $default{filenamelength}) {
+    my $ext = '';
+    if ($name =~ s/$REextension//i) {
+      $ext = $1;
+    }
+    
+    $name = substr($name, 0, $default{filenamelength} - length($ext)) . $ext;
+  }
+
+  return $name;
+} # end &checklen
+
+
+# Prints a body or attachment part, decoding if needed, to a specified
+# file. Returns 'undef' for error, and the filename on success.
+sub dumpbody($$$) {
+  my $enc   = shift;
+  my $fname = shift;
+  my $mref  = shift;
+
+  if (!open(BODY, ">$fname")) {
+    warn "$0: can't open $fname: $!\n";
+    return undef;
+  }
+
+  if ($enc eq 'none') {
+    print BODY $$mref;
+  } elsif ($enc eq 'base64') {
+    print BODY decode_base64($$mref);
+  } elsif ($enc eq 'quoted') {
+    print BODY decode_qp($$mref);
+  } else {
+    warn "$0: What encoding is $enc?\n";
+    print BODY $$mref;
+  }
+  close BODY;
+
+  return $fname;
+} # end &dumpbody
+
+
+# Prints the headers to a automatically named file.
+# Returns 'undef' for error, and the filename on success.
+sub dumpheaders($$$) {
+  my $dir = shift;
+  my $level = shift;
+  my $hdref = shift;
+  my $fname;
+  local $,;
+
+  $, = "\n";
+  $fname = pickname($level, "headers", $default{headerprefix});
+
+  if(!open(HEAD, "> $dir/$fname")) {
+    warn "$0: can't open $fname: $!\n";
+    return undef;
+  }
+  
+  print HEAD @$hdref;
+  print HEAD "\n\n";
+  close HEAD;
+
+  return "$dir/$fname";
+} # end &dumpheaders
+
+
+# Abstract the unlocking, so code only needs to be changed in one place.
+sub myunlock($) {
+  my $lockfile = shift;
+
+  ## LockFile::Simple way:
+  #lock($lockfile);
+
+  # File::NFSLock way
+  $default{"internal_lockobject"} = undef;
+
+} # end &myunlock
+
+# Abstract the locking, so code only needs to be changed in one place.
+sub mylock($) {
+  my $lockfile = shift;
+  my $basedir  = undef;
+
+  ## LockFile::Simple way:
+  #unlock($lockfile);
+  
+RETRY:
+  # File::NFSLock way: (can't let lock variable go out of scope)
+  $default{"internal_lockobject"} = File::NFSLock->new($lockfile,"BLOCKING");
+  if (!defined($default{"internal_lockobject"})) {
+    if(defined($basedir)) {
+      die "lock error";
+    } else {
+      $basedir = $lockfile;
+      $basedir =~ s:/[^/]+$::;
+
+      mkpath([$basedir]);
+      goto RETRY;
+    }
+  }
+
+} # end &mylock
+
+
+sub forcemode($) {
+  my $what = shift;
+  my $dm;
+  my $fm;
+
+  ($dm,$fm) = split(/,/, $default{forcemode});
+  $fm = $dm unless $fm;
+
+  if ( -f $what ) {
+    chmod oct($fm), $what;
+  } else {
+    chmod oct($dm), $what;
+  }
+} # end &forcemode
+
+
+# Print usage, with an optional error mesage, then exit.
+sub usage($$) {
+  my $exit = shift;
+  my $mess = shift;
+
+  if (defined($mess)) {
+    print "$0: $mess\n\n";
+  }
+
+  eval 'use Pod::Text;
+        my $parser = Pod::Text->new (sentence => 0, width => 78);
+
+        select(STDOUT);
+        open(STDIN, "<&DATA");
+
+        $parser->parse_from_filehandle;
+       ';
+
+  # Check for problems with using Pod::Text...
+  if ($@) {
+    while(<DATA>) {
+      last if /^=cut/;
+      print;
+    }
+  }
+  exit($exit);
+} # end &usage()
+
+# A default set of types to extensions, here rather than where
+# other defaults are set since these will probably be edited less
+# and are rather unsightly.
+sub mkextmap() {
+  $default{ext} = {
+
+    # Used internally
+    "default"                       => "seg",
+    "preamble"                      => "txt",
+    "epilogue"                      => "txt",
+
+    # Regular content-types
+    "text/x-vcard"                  => "vcf",
+    "text/x-setext"                 => "etx",
+    "text/plain"                    => "txt",
+    "txt/plain"                     => "txt",	# typo version
+    "text/html"                     => "html",
+    "text/sgml"                     => "sgml",
+    "text/css"                      => "css",
+    "text/xml"                      => "xml",
+    "text/richtext"                 => "rtx",
+    "text/calandar"                 => "ics",	# outlook specific?
+    "text/rtf"                      => "rtf",
+    "text/tab-separated-values"     => "tsv",
+    "text/tab-seperated-values"     => "tsv",	# typo version
+    "text/*"                        => "txt",
+
+    "audio/x-aiff"                  => "aiff",
+    "audio/x-mpeg"                  => "mp3",	# probably wrong
+    "audio/x-mpegurl"               => "m3u",	# probably wrong
+    "audio/x-wav"                   => "wav",
+    "audio/x-pn-aiff"               => "aiff",
+    "audio/x-pn-au"                 => "au",
+    "audio/x-pn-realaudio"          => "rm",
+    "audio/x-pn-wav"                => "wav",
+    "audio/x-realaudio"             => "ra",
+    "audio/scpls"                   => "m3u",	# probably wrong
+    "audio/basic"                   => "au",
+    "audio/mpg"                     => "mp3",	# not correct
+    "audio/mp3"                     => "mp3",	# not correct
+    "audio/mpeg"                    => "mp3",
+    "audio/mpegurl"                 => "m3u",
+    "audio/midi"                    => "mid",
+    "audio/x-scpls"                 => "m3u",
+    "audio/ogg"                     => "ogg",	# not correct
+    "audio/wav"                     => "wav",	# not correct
+    "audio/*"                       => "audio",
+
+    "application/x-stuffit"         => "sit",
+    "application/x-compress"        => "Z",
+    "application/x-gzip"            => "gz",
+    "application/x-cpio"            => "cpio",
+    "application/x-gunzip"          => "gz",
+    "application/x-bzip2"           => "bz2",
+    "application/x-tar"             => "tar",
+    "application/x-gtar"            => "tar",
+    "application/x-shar"            => "shar",
+    "application/x-tar-gz"          => "tgz",
+    "application/x-zip-compressed"  => "zip",
+    "application/x-ar"              => "a",
+    "application/x-shockwave-flash" => "swf",
+    "application/x-director"        => "dcr",
+    "application/x-dvi"             => "dvi",
+    "application/x-sh"              => "sh",
+    "application/x-perl"            => "pl",
+    "application/x-tcl"             => "tcl",
+    "application/x-javascript"      => "js",
+    "application/x-tex"             => "tex",
+    "application/x-texinfo"         => "texinfo",
+    "application/x-latex"           => "latex",
+    "application/x-sdp"             => "sdp",
+    "application/x-troff"           => "tr",
+    "application/x-troff-man"       => "man",
+    "application/x-troff-ms"        => "ms",
+    "application/x-troff-me"        => "me",
+    "application/x-patch"           => "patch",
+    "application/x-tgif"            => "obj",
+    "application/pgp-signature"     => "sig",
+    "application/andrew-inset"      => "ez",
+    "application/postscript"        => "ps",
+    "application/mac-binhex40"      => "hqx",
+    "application/mac-compactpro"    => "cpt",
+    "application/ogg"               => "ogg",
+    "application/pdf"               => "pdf",
+    "application/rtf"               => "rtf",	# not correct
+    "application/sdp"               => "sdp",	# probably wrong
+    "application/smil"              => "smil",
+    "application/streamingmedia"    => "ssm",
+    "application/msword"            => "doc",
+    "application/vnd.msword"        => "doc",	# not correct
+    "application/vnd.ms-word"       => "doc",	# not correct
+    "application/msexcel"           => "xls",	# not correct
+    "application/vnd.msexcel"       => "xls",	# not correct
+    "application/vnd.ms-excel"      => "xls",
+    "application/vnd.ms-powerpoint" => "ppt",
+    "application/*"                 => "data",
+
+    "video/x-mpeg"                  => "mpg",	# probably wrong
+    "video/x-msvideo"               => "avi",
+    "video/x-scpls"                 => "m3u",
+    "video/x-shockwave-flash"       => "swf",	# correctly application/...
+    "video/avi"                     => "avi",	# not correct
+    "video/mpeg"                    => "mpg",
+    "video/msvideo"                 => "avi",	# probably wrong
+    "video/nsv"                     => "nsv",	# probably wrong
+    "video/quicktime"               => "mov",
+    "video/scpls"                   => "m3u",	# probably wrong
+    "video/*"                       => "video",
+
+    "image/x-xbm"                   => "xpm",
+    "image/x-portable-bitmap"       => "pbm",
+    "image/x-portable-greymap"      => "pgm",
+    "image/x-portable-pixmap"       => "ppm",
+    "image/x-xbitmap"               => "xbm",
+    "image/x-xpixmap"               => "xpm",
+    "image/x-xwindowdump"           => "xwd",
+    "image/x-ico"                   => "ico",
+    "image/x-png"                   => "png",
+    "image/png"                     => "png",
+    "image/tiff"                    => "tiff",
+    "image/bmp"                     => "bmp",
+    "image/gif"                     => "gif",
+    "image/jpeg"                    => "jpg",
+    "image/pjpeg"                   => "jpg",
+    "image/*"                       => "image",
+
+    "model/vrml"                    => "vrml",
+
+    "message/rfc822"                => "mail",
+    "message/news"                  => "news",
+    "message/partial"               => "segment",
+    "message/*"                     => "message",
+  };
+} # end &mkextmap
+
+__END__
+
+=pod
+
+=head1 NAME
+
+mimedump - dump a MIME message to disk
+
+=head1 SYNOPSIS
+
+From the shell:
+
+    mimedump -r "/directory/template/%Y/%b/%d-%#" < mailfile
+
+In procmail:
+
+    :0
+    * ^Content-Type: *multipart/
+    {
+      # Double safety
+      LOCKFILE=$MAILDIR/.wait-for-it
+
+      BASEDIR="$MAILDIR/attachments/%Y/%b/%d-%#"
+      PID=$$
+      # Do the dump and grab the output directory
+      SAVEDIR=`/bin/nice mimedump -d -r -o mimedump-$PID.out $BASEDIR`
+
+      # Clear procmail lock
+      LOCKFILE=
+
+      # Put output directory into the headers
+      :0hfw
+      | formail -i "X-Attachment-Dir: $SAVEDIR"
+    }
+	
+
+=head1 DESCRIPTION
+
+mimedump reads a single mail message in and parses if as if
+it is a MIME message, dumping body and/or attachments to the
+specified directory. Intended for use in procmail filters.
+It can decode base64 and quoted-printable attachments, and
+recurse into message/* parts. It outputs a list of the files
+created.
+
+mimedump takes a directory template to use, with optional
+stftime(1) escapes and an additional C<%#> escape which is
+the lowest number needed to make a unique directory. The
+example in the synopsis, C</directory/template/%Y/%b/%d-%#>,
+will create directory under C</directory/template/> for the
+current four-digit year, under that one for the current
+month (three-letter abbreviation), and under that a unique
+directory named after the two digit day of the month and
+a sequence number for that day.
+
+Note: the template must begin with either C<./> or C</>
+and may not contain any characters from [<>"'&;!`$].
+
+=head1 USAGE
+
+	mimedump [options] template
+
+Options:
+
+=over 4
+
+=item *
+
+-a       --all
+
+Print all parts (headers, mime preambles and epilogues, part headers).
+Does not imply recursion.
+
+=item *
+
+-d       --showdir
+
+Print the output directory. (Done before processing I<-o/-output==FILE>
+so scripts can know where to find the output file.)
+
+=item *
+
+-r       --recurse
+
+Recurse into message/* parts.
+
+=item *
+
+-v       --verbose
+
+Display warnings.
+
+=item *
+
+-s       --split
+
+Use an alternate (slower) method to break up the file. Might work
+better with some forms of broken messages.
+
+=item *
+
+-c       --noclobber
+
+Don't overwrite existing files.
+
+=item *
+
+-q       --quiet
+
+Don't output names of created files.
+
+=item *
+
+-f MODE[,MODE]      --forcemode=MODE[,MODE]
+
+Force mode on directory / files created. If one mode, will be used for
+both. If two, directory first, files second.
+
+=item *
+
+-o FILE      --output=FILE
+
+Output filenames to FILE instead of STDOUT. If the file does not
+start with C</> then it will be put in the output directory.
+
+=item *
+
+-u PATH=ALTPATH      --url=PATH=ALTPATH
+
+When printing filenames, update PATH prefix to be ALTPATH.
+Intended for turning a filename into a URL.
+
+=item *
+
+-h       --help
+
+Print this usage and exit.
+
+=item *
+
+-V       --version
+
+Print version and exit.
+
+=back
+
+=head1 DETAILS
+
+=head2 What Gets Dumped
+
+mimedump's parsing is not based on extenal modules, although the
+C<MIME::Base64> and C<MIME::QuotedPrint> modules are used for
+decoding message parts. mimedump does not check for or require
+a I<MIME-Version> header. On non-multipart messages, the body will
+be saved to a file, decoded if needed. When operating in all
+(C<-a> / C<--all>) mode every part of the message except the MIME
+boundary lines will be saved to different files. Since the headers
+will specify the boundary, the original message could be
+re-assembled from those parts.
+
+In multipart messages all parts are saved. Typically MIME
+decoders will only extract one type from a multipart/alternative
+selection, but mimedumper saves them all.
+
+=head2 Directory Template
+
+Some typical C<strftime()> C<%> expansions.
+ 
+=over 4
+
+=item %A
+
+Full weekday name.
+
+=item %a
+
+Abbreviated weekday name.
+
+=item %B
+
+Full month name.
+
+=item %b
+
+Abbreviated month name.
+
+=item %D
+
+The date in I<%m/%d/%y> format.
+
+=item %d
+
+Day of month, two digits (00 to 31).
+
+=item %F
+
+Date in I<%Y-%m-%d> format.
+
+=item %H
+
+Two digit hour (24-hour clock) (00 to 23).
+
+=item %I
+
+Two digit hour (12-hour clock) (01 to 12).
+
+=item %j
+
+Three digit day of year (001 to 366).
+
+=item %M
+
+Two digit minute.
+
+=item %m
+
+Two digit month (01 to 12)
+
+=item %p
+
+An 'AM' or 'PM' string.
+
+=item %R
+
+The time in I<%H:%M> format.
+
+=item %T
+
+The time in I<%H:%M:%S> format.
+
+=item %S
+
+Two digit second (00 to 61).
+
+=item %U
+
+Two digit week number of year (weeks starting on Sunday) (00 to 53).
+
+=item %w
+
+One digit weekday (weeks starting on Sunday) (1 to 7).
+
+=item %Y
+
+Four digit year (0000 to 9999).
+
+=item %y
+
+Two digit year (00 to 99).
+
+=item %Z
+
+Time zone.
+
+=item %%
+
+A literal C<%>.
+
+=item %#
+
+Not a C<strftime> expansion, but used in mimedump templates to be
+a unique number.
+
+=back
+
+=head2 File Names
+
+When the MIME headers provide a filename, preference is given
+towards using it. The provided filename must pass some sanity
+checks, first though. The filename must contain only alphanumerics,
+hyphens, underscores and dots. mimedump will try to clean up
+non-conforming filenames but will replace them completely if
+it is too difficult. Filenames will be limited to a maximum
+length, by default 80 bytes. When shortening long filenames,
+extra text is removed from the end, while trying to preserve
+any filename extension.
+
+Internally generated filenames are of the form
+
+I<prefix>-I<pid>-I<num>.I<extension>
+
+The I<prefix> is typically 'part', for the bodies of messages or
+the parts of multipart message. The I<pid> is the process id of
+mimedumper, in an effort to reduce filename conflicts when
+mimedumper runs multiple times in the same directory. The I<num>
+is a two part number, a recursion level and a sequence number
+within that recursion level seperated by an underscore. The
+extension is picked from an internal list based on the part
+content-type. If there is no extension for a type, none will
+be used (and the dot for the extension will be left out).
+
+=head2 Lockfiles
+
+mimedump uses a lockfile to ensure exclusive creation of a
+directory. It will attempt to place this lockfile in the deepest
+directory of the template that does not have any C<%x> components.
+Network filesystem (NFS) safe locks are used.
+
+=head1 COPYRIGHT
+
+This script is copyright by Benjamin Elijah Griffin / Eli the Bearded.
+The home source for it is his directory at CPAN,
+I<http://www.cpan.org/authors/id/E/EL/ELIJAH/>.
+
+=head1 OSNAMES
+
+Unix or unix-likes.
+
+=head1 BUG FIXES
+
+Version 0.52 fixes a dumb bug with the I<-q>uiet mode, allows whitespace
+around C<=> in MIME headers, tries to guess the MIME boundary if it
+cannot find one in the headers.
+
+Version 0.75 offers a index() based split (as default) that is much faster
+than the old regexp based split (still available as it is better able to
+deal with certain types of broken messages). There is now an option to
+disable clobbering of existing files.
+
+Version 0.90 offers renamer for attachments on the web.
+
+=head1 TODO
+
+RFC 2231 method of breaking up filenames is not supported:
+
+  Content-Disposition: attachment; filename*1="foo."; filename*2="bar"
+
+This specifies a filename of "foo.bar"
+
+=head1 BUGS
+
+Directory templates cannot have E<lt>ctrl-aE<gt>, ascii 001,
+characters in them.
+
+Send bug reports to E<lt>elijah@cpan.orgE<gt>.
+
+=head1 CPAN INFO
+
+Infomation for use at/by CPAN. http://www.cpan.org/scripts/
+
+=head1 SCRIPT CATEGORIES
+
+Mail
+
+=head1 README
+
+Extract MIME parts to files in unique date/time stamp directories,
+ideal for use with procmail.
+
+=head1 PREREQUISITES
+
+This script uses the C<strict>, C<vars>, pragma modules. The
+C<POSIX> module is used for C<strftime()> expansions. C<File::Path>
+is used to make directories. All of those should have come
+with your version of perl.
+
+Additional modules needed are C<File::NFSLock> for nfs-safe
+lockfiles, and C<MIME::Base64> and C<MIME::QuotedPrint> for
+decoding message parts.
+
+=head1 COREQUISITES
+
+The script attempts to use C<Pod::Text> to display formatted
+help. If it can't, unformatted POD is displayed instead.
+
+=cut
+

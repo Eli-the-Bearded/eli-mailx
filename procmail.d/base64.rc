@@ -1,0 +1,17 @@
+# Inline decode non-multiparts that are base64
+# Uses the old mmencode tool; newer systems might not have that and
+# may want to replace it with base64, but check command line.
+
+:0
+* ^MIME-Version: 1.0
+* ^Content-Type: *text/
+* ^Content-Transfer-Encoding:[  ]*base64
+{
+  # 'b' body, 'f' filter, 'w' wait to check exit code
+  :0bfw
+  | mmencode -b -u;echo
+
+  # 'a' and also (but only if exit code indicated success)
+  :0ahf
+  | formail -R Content-Transfer-Encoding X-Orig-Content-Transfer-Encoding
+}
