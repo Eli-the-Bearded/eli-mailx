@@ -135,6 +135,9 @@ lookup(name)
 {
 	register struct var *vp;
 
+	/* This is noisy but informative about how variables are used. */
+	if(debug >= 2)
+		printf("lookup(\"%s\")\n", name);
 	for (vp = variables[hash(name)]; vp != NOVAR; vp = vp->v_link)
 		if (*vp->v_name == *name && equal(vp->v_name, name))
 			return(vp);
@@ -185,7 +188,7 @@ int
 hash(name)
 	register char *name;
 {
-	register h = 0;
+	register int h = 0;
 
 	while (*name) {
 		h <<= 2;
