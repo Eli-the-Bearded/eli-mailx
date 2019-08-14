@@ -1,23 +1,22 @@
     Mail   Commands
-t <message list>		type messages
-n				goto and type next message
+n				goto and print next message (also blank line)
+p <message list>		print messages
 e <message list>		edit messages
 f <message list>		give head lines of messages
 d <message list>		delete messages
 s <message list> file		append messages to file
 u <message list>		undelete messages
-R <message list>		reply to message senders
-r <message list>		reply to message senders and all recipients
-pre <message list>		make messages go back to /usr/spool/mail
+r <message list>		reply to message sender (*)
 m <user list>			mail to specific users
 q				quit, saving unresolved messages in mbox
-x				quit, do not remove system mailbox
-h				print out active message headers
-!				shell escape
-cd [directory]			chdir to directory or home if none given
+x				exit without saving any changes
+z[+-]				page through active message headers
 
-A <message list> consists of integers, ranges of same, or user names separated
-by spaces.  If omitted, Mail uses the last message typed.
+A <message list> consists of integers, ranges of same, or search strings
+by spaces. If omitted, Mail uses the last message typed.
+See "help message-list".
 
 A <user list> consists of user names or aliases separated by spaces.
 Aliases are defined in .mailrc in your home directory.
+
+(*) Defaults to reply-all, use "R" for sender only. See "help reply".
