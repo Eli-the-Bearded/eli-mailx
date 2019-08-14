@@ -1,0 +1,346 @@
+#!/usr/bin/perl -w
+# Read in a mail message, mostly ignoring headers, generate a "wrote"
+# message, print out the body with '> ' quoting. Tries to be smart about
+# mime messages, but doesn't implement a full mime parser.
+#
+# Reads from stdin or first file argument, writes a to stdout or argument
+# after first file. Does not include initial or final blank line. 
+#
+# The "wrote" message takes one of three forms:
+#	You wrote:		normal
+#	Fred wrote:		Fred on From:, and multiple recipients
+#	On Date, Fred wrote:	"top post" mode (--top-post)
+#
+# Benjamin Elijah Griffin 	14 Oct 2011
+
+use strict;
+use vars qw( $in $out $header $value $boundary $state $primed $quote $qp
+             $wrote_msg $alt_wrote_msg $tp_msg $recips $thresh $line $prefix
+	     $date $use_toppost $qpbody $linesize $output );
+
+# variables not initialized here:
+# $in             input file name
+# $out            output file name
+# $header         header name
+# $value          header right hand side (RHS)
+# $boundary       MIME boundary, if MIME message
+# $state          current parsing state
+# $primed	  substate for MIME parsing
+# $qp             body is quoted-printable
+# $recips         approximate count of recipients (might overcount)
+# $line           workspace for current body line
+# $prefix         existing quotes on line
+# $qpbody	  accumulator for quoted-printable body (ugh)
+# $output         number of body lines output so far
+# $use_toppost	  change logic for "wrote" line
+
+# Normal prefix to quoted content. In the $alt_wrote_msg, the word
+# "You" from this will be replaced by a name from From: if one is found.
+$wrote_msg     = "You wrote:\n";
+$alt_wrote_msg = $wrote_msg;
+
+# for a top post style response, %%Date%% is Date header without time or
+# timezone, %%From%% is From: line name and email address
+$tp_msg        = "On %%Date%%, %%From%% wrote:\n";
+
+# Number of recipients before switching to $alt_wrote_msg
+$thresh = 4;
+
+# Target length of lines (used only with quoted-printable content)
+$linesize = 72;
+
+# Basic quote string
+$quote = '> ';
+
+while(defined($ARGV[0])) {
+  if ($ARGV[0] =~ /^-/) {
+    my $arg = shift;
+
+    if($arg =~ /^--top/) {
+      $use_toppost = 1;
+      next;
+    }
+
+    die "$0: unrecognized option: $arg\n" .
+        "usage: reply-body [ --top-post ] [ INPUT [ OUTPUT ]]\n";
+  }
+
+  if(defined($in)) {
+    $out = shift;
+    next;
+  }
+  if(-f $ARGV[0]) {
+    $in = shift;
+    next;
+  }
+
+  die "$0: what should I do with $ARGV[0]? Not a file...\n";
+} # while(defined($ARGV[0]))
+
+if(defined($in)) {
+  if(!open(STDIN, "<", $in)) {
+    die "$0: $in could not be read: $!\n";
+  }
+}
+if(defined($out)) {
+  if(!open(STDOUT, ">", $out)) {
+    die "$0: $out could not be written: $!\n";
+  }
+}
+
+$state = 'headers';
+$recips = 0;
+$output = 0;
+$qpbody = '';
+while(<>) {
+
+  if($state eq 'headers') {
+    if(/^\s+$/) {
+      acton($header, $value);
+      $header = $value = '';
+
+      if($boundary) {
+        $state = 'mime';
+      } else {
+	$state = 'body';
+      }
+      next;
+    }
+
+    if(/^\s+/) {
+      $value .= $_;
+      next;
+    }
+
+    # must be a new header, act on the old one
+    if($header) {
+      acton($header, $value);
+    }
+
+    if(/^([^ :]+):(.*)/s) {
+      $header = lc($1);
+      $value  = $2;
+      next;
+    }
+
+    if(/^from /i) {
+      next;
+    }
+
+    die "$0: parse error in headers for line\n" .
+        "$_";
+
+  } # if($state eq 'headers')
+
+  if($state eq 'mime') {
+    if(/^\s*$/) {
+      if($header) {
+	acton($header, $value);
+        $header = $value = '';
+      }
+
+      if($primed) {
+        $state = 'mimebody';
+      }
+      next;
+    }
+
+    if($header and /^\s+/) {
+      $value .= $_;
+      next;
+    }
+
+    if($header) {
+      acton($header, $value);
+      $header = $value = '';
+    }
+
+    if(/^([^ :]+):(.*)/s) {
+      $header = lc($1);
+      $value  = $2;
+      next;
+    }
+
+  } # if($state eq 'mime')
+
+  if($state eq 'body' or $state eq 'mimebody') {
+
+    # The only difference between 'body' and 'mimebody' is when to end.
+    if($state eq 'mimebody') {
+      if(/^--\Q$boundary/) {
+        $state = 'body'; 
+	last;
+      }
+    }
+
+    if($qp) {
+      $line = $_;
+      $line =~ s/=\n//;
+      $line =~ s/=([\da-f]{1,2})/pack('C',hex($1))/eig;
+
+      $qpbody .= $line;
+      next;
+    }
+
+    bodylineprocess();
+
+  } # if($state eq 'body' or $state eq 'mimebody')
+
+} # while(<>)
+
+if($qpbody) {
+  my $save;
+  my $qsave = '';
+
+  $save = length($qpbody);
+
+  # Works by repeatly removing one line or $linesize from start of body
+  while($qpbody) {
+    # Remember longest left-most match wins
+    # \A Match only at beginning of string
+    # \z Match only at end of string
+    $qpbody =~ s/\A(
+		   # blank line
+		    \s*?\n
+
+                   # line that does not need folding
+		   |[^\n]{0,$linesize}\n
+
+                   # line that does need folding
+		   |[^\n]{0,$linesize}[ \t]
+
+                   # line too long for normal folding
+		   |\S+\s
+		   
+                   # catch any final line without whitespace
+		   |.*\z
+		   )//x;
+
+    # bodylineprocess operates on $_
+    $_ = $1;
+
+    # Correct line wrapping on folded lines. Can cause lines to
+    # exceed $linesize
+    if(/^(>(?: *> )*)/) {
+      $qsave = $1;
+    } else {
+      $_ = $qsave . $_;
+
+      if(/\n/) {
+	$qsave = '';
+      }
+    }
+    bodylineprocess();
+
+    if($save == length($qpbody)) {
+      die "$0: infinite loop while eating qpbody, start is\n" .
+          substr($qpbody, 0, $linesize +4) . "\n";
+    }
+    $save = length($qpbody);
+  }
+} # if($qpbody)
+
+if($state ne 'body' or $output == 0) {
+  die "$0: fell through bottom of message with no body to quote\n";
+}
+
+exit;
+
+# Takes a lowercased header name and a rhs and decides if to act on it.
+# The rhs can have all sorts of whitespace, so 'eq' comparisons are not
+# a good idea.
+sub acton {
+  my $header = shift;
+  my $rhs    = shift;
+  my $use;
+
+  if($header eq 'from') {
+    if($rhs =~ /"?([\w-]+)[^"<>@]*"?\s*</) {
+      $use = $1;
+
+      # found a first name
+      $alt_wrote_msg =~ s/\bYou\b/$use/;
+
+    }
+
+    # make a top-post header
+    $rhs =~ s/\s+/ /g;
+    $rhs =~ s/^\s|\s$//g;
+    $tp_msg =~ s/%%From%%/$rhs/;
+
+    $recips ++;
+    return;
+  }
+
+  if($header eq 'date') {
+    # Couple of common formats:
+    # Date: Mon, 10 Jul 2017 11:59:22 +0000
+    # Date: Mon, 10 Jul 2017 13:00:23 -0500 (CDT)
+
+    # chop down to just DoW, Date Mon Year
+    $rhs =~ s/\s+/ /g;
+    $rhs =~ s/^\s|\s$//g;
+    # squash time and TZ
+    $rhs =~ s, \d\d:\d\d:\d\d *[+-]\d\d\d\d(?: *\([^)]*\))?,,;
+    $tp_msg =~ s/%%Date%%/$rhs/;
+
+    return;
+  }
+
+  if($header eq 'to' or $header eq 'cc') {
+    $recips += ($rhs =~ tr/,/,/);
+    return;
+  }
+
+  if($header eq 'content-type') {
+    if($rhs =~ /\bboundary="([^"\s]+)"/i) {
+      $boundary = $1;
+    }
+    if($rhs =~ m:text/plain:i) {
+      if($state eq 'mime') {
+        $primed = 1;
+      }
+    }
+    return;
+  }
+
+  if($header eq 'content-transfer-encoding') {
+    if($rhs =~ /quoted-printable/i) {
+      $qp = 1;
+    }
+    return;
+  }
+
+} # end &acton 
+
+# Operates on $_ to produce quoted output.
+sub bodylineprocess {
+
+  # Skip leading blank lines
+  if($output == 0 and /^\s+$/) {
+    return;
+  }
+
+  $line = $quote . $_;
+  if($line =~ s/^(>(?: *>+ *)+)//) {
+    # normalize nested quotes
+    $prefix = $1;
+    $prefix =~ s/\s+//g;
+    $line = $prefix . ' ' . $line;
+  }
+
+  # Normalize line end whitespace
+  $line =~ s/\s+$/\n/;
+
+  if($output == 0) {
+    if($use_toppost) {
+      print $tp_msg;
+    } elsif($recips < $thresh) {
+      print $wrote_msg;
+    } else {
+      print $alt_wrote_msg;
+    }
+  }
+  print $line;
+  $output ++;
+} # end &bodylineprocess 

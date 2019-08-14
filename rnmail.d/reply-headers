@@ -1,0 +1,490 @@
+#!/usr/bin/perl -w
+#       usage: reply-headers [ INPUT [ OUTPUT ]]
+# Make a "reply all" style header reads in a message (or just headers)
+# from stdin or first file argument, writes a to stdout or argument
+# after first file. Does not include final blank line. Does not include
+# a quoted message body.
+#
+# Intended to be customized per user. See in particular:
+#   fromtrans fromname name_r addr_r 
+#
+# Benjamin Elijah Griffin 	14 Oct 2011
+use strict;
+
+use vars qw ( @heads %hv $this $me_r $addr_r $in $out 
+	      $name_r %fromtrans %fromname
+              @out @order @keep @found %transform %edit
+	      $header $value $addr $use $editor $user $host );
+
+# variables not initialized here:
+# @heads   one header per value, dupes allowed, in order found
+# %hv      one lowercased header name per value, no dupes, values joined
+# $this    holding space for multiline headers
+# $in      input file name
+# $out     output file name
+# @found   holds a set of temporary search results
+# $use     holds a single temporary search result
+# $header  holds a header name
+# $value   holds a header right hand side (RHS)
+# $editor  holds a subroutine to edit a header
+
+# From: "$mailname" <$user@$host>
+$user     = ($ENV{USER}       or 'user');
+$host     = ($ENV{HOST}       or 'example.net');
+$mailname = ($ENV{RNMAILNAME} or 'Mail User');
+
+
+# Regular expression to match my "name", on From lines
+# Customize to your tastes.
+$name_r = qr/\b
+	     ( 
+	      \w+ \s+ \w+
+	     )\b
+	    /xi;
+
+# Regular expression to match my address, for writing a from address
+# first (outmost) capture used.
+# Customize to your tastes.
+$addr_r = qr/\b
+	       ( ${user}(?:[+][^@]+)?		# allow plus form addresses
+	         \@
+	         ${host}			
+	       )
+	     \b
+            /xi;
+
+# Regular expression to match my address, to remove from recipient
+# list(s). Substring match okay, but be careful.
+# No capturing used here. 
+$me_r =  qr/(?:^|\s|<)				# start boundary
+		$addr_r				# previously defined matches
+            (?:\s|>|$)				# end boundary
+           /xi;
+
+
+# For rewriting delivery boxes to appropriate custom domains
+# account+boxname@panix.com => <from@address>
+%fromtrans = (
+  # default is for the blank case, will be <angle-bracketed> in use
+  DEFAULT => "$user\@$host',
+
+# 'user+demo@example.com' => 'demo@example.org',
+);
+
+# email@address => "Name To Use"
+# applied after %fromtrans
+%fromname = (
+  # default is for the blank case, will be "double-quoted" in use
+  DEFAULT => $mailname,
+
+# 'demo@example.org' => 'Demo User',
+);
+
+
+# These are the unordered headers for output. Additional headers to 
+# always use can be added here. Include ALL desired whitespace.
+@out = (
+  # From header is often edited. This is the source text for
+  # $name_r to operate on for %fromname edits
+  qq!From: "$fromname{DEFAULT}" <$fromtrans{DEFAULT}>\n!,
+  "Mime-Version: 1.0\n",
+  "XContent-Type: text/plain; charset=UTF-8\n",
+  "Bcc: \n",
+);
+
+# These keep the same header name in output, but content can change.
+# Except for To:, ouput is usually very close to original RHS. To: can
+# become the value from From:.
+# Case insensitive.
+@keep = (
+  'To:',
+  'Subject:',
+  'CC:',
+  'References:',
+  'Thread-Topic:',
+  'Thread-Index:',
+); # @keep
+
+# These headers get renamed before copying to output, and content can change
+# based on the original header name. From: to To: is not here because To: 
+# is above for multi-recipient cases.
+# Case insensitive.
+%transform = (
+  # original-name => new-name
+  'Message-ID:'   => 'In-Reply-To:',
+  'Reply-To:'     => 'X-Orig-Reply-To:',
+  'Delivered-To:' => 'From:',
+); # %transform
+
+# These are subroutines to edit headers. $1 will be the header RHS.
+# The RHS begins RIGHT AFTER the colon, so it is customary to start
+# with a single space. The value includes the trailing new line.
+# The functions return the new header value, or undef if the edit
+# should be aborted.
+%edit = (
+  'Subject:' =>
+	  sub {
+	        my $sub = $_[0];
+		$sub =~ s/^\s*/ /;
+
+		# if we don't start with exactly " Re: "
+		# remove any " RE: " or " re:", etc
+		$sub =~ s/^\s*re://i;
+		# now normalize leading whitespace
+		$sub =~ s/^\s*/ /;
+		# and add proper Re:
+		$sub = ' Re:' . $sub;
+
+		$sub;
+	      }, # Subject: sub
+
+  'References:' =>
+	  sub {
+	        my $ref = $_[0];
+		$ref =~ s/^\s*/ /;
+
+		my $id = $hv{'message-id:'};
+		if(!defined($id)) {
+		  return undef;
+		}
+
+		chomp($ref);
+		# Mail references (unlike News) can wrap lines.
+		$id =~ s/^\s*/\n /;
+		$ref .= $id;
+
+	        $ref;
+	      }, # References: sub
+
+  # Uses values from To: and From: to compute new To: header.
+  'To:' =>
+	  sub {
+	        my $to = $_[0];
+		my @list;
+		# The sep(arator) makes addresses line up nicely, one per line
+		my $sep = ",\n   "; 
+		$to =~ s/^\s*/ /;
+
+		# From: first, so it will be first on recipient list
+		my $from = $hv{'from:'};
+		@list = parseaddrlist($from);
+		push(@list, parseaddrlist($to));
+
+		$to = '';
+	        for my $recip (@list) {
+		  # Don't include me in list.
+		  if($recip !~ /$me_r/) {
+		    $to .= $recip . $sep;
+		  }
+		}
+
+		# Remove list bogus separator
+		$to = substr($to, 0, (-1 * length($sep))) . "\n";
+
+		$to;
+	      }, # To: sub
+
+  # Uses values from just CC: to compute new CC: header.
+  'CC:' =>
+	  sub {
+	        my $cc = $_[0];
+		my @list;
+		# The sep(arator) makes addresses line up nicely, one per line
+		my $sep = ",\n   ";
+		$cc =~ s/^\s*/ /;
+
+		@list = parseaddrlist($cc);
+
+		$cc = '';
+	        for my $recip (@list) {
+		  # Don't include me in list.
+		  if($recip !~ /$me_r/) {
+		    $cc .= $recip . $sep;
+		  }
+		}
+
+		# Remove list bogus separator
+		$cc = substr($cc, 0, (-1 * length($sep))) . "\n";
+
+		$cc;
+	      }, # CC: sub
+
+  # Creates a customized from header, merging the Delivered-To: address
+  # with any from header in @out already.
+  'Delivered-To:' =>
+	  sub {
+	        my $addr = $_[0];
+		my $line;
+		my $name;
+
+		my @found = grep(/^From:/, @out);
+		$line = shift (@found);
+
+		if( $addr =~ /$addr_r/) {
+		  # $addr_r captures an address like:
+		  #	user+plus@panix.com
+		  #	demo@example.org
+		  $addr = $1;
+
+		  # Now some specific re-writes
+		  if(exists($fromtrans{lc($addr)})) {
+		    # don't do anything if exists but undef
+		    $addr = $fromtrans{lc($addr)} || $addr;
+		  }
+		  if(exists($fromname{lc($addr)})) {
+		    # don't do anything if exists but undef
+		    $name ||= $fromname{lc($addr)};
+		  }
+		}
+
+		if($addr !~ /@/) {
+		  return undef;
+		}
+		if($line) {
+		  # Drop header name
+		  $line =~ s/^From://;
+
+		  # Substitute in the address
+		  $line =~ s/<[^>]*>/<$addr>/;
+
+		  # fix for name on named site
+		  if($name) {
+		    $line =~ s/$name_r/$name/i;
+		  }
+
+		  # Then delete existing From: header
+		  @out = grep(!/^From:/, @out);
+		} else {
+		  # Create From from scratch
+		  $line = qq( "$fromname{DEFAULT}" <$addr>\n);
+		}
+
+		$line;
+	      }
+); # %edit
+
+# Order to output headers, will output with this capitalization.
+# Any header not on this list in @out will be appended in an
+# unspecified order.
+@order = (
+  'From:',
+  'To:',
+  'CC:',
+  'BCC:',
+  'Subject:',
+  'Thread-Topic:',
+  'Thread-Index:',
+  'References:',
+  'In-Reply-To:',
+); # @order
+
+while(defined($ARGV[0])) {
+  if ($ARGV[0] =~ /^-/) {
+    die "$0: unrecognized option: $ARGV[0]\n" .
+        "usage: reply-headers [ INPUT [ OUTPUT ]]\n";
+  }
+
+  if(defined($in)) {
+    $out = shift;
+    next;
+  }
+  if(-f $ARGV[0]) {
+    $in = shift;
+    next;
+  }
+
+  die "$0: what should I do with $ARGV[0]? Not a file...\n";
+} # while(defined($ARGV[0]))
+
+if(defined($in)) {
+  if(!open(STDIN, "<", $in)) {
+    die "$0: $in could not be read: $!\n";
+  }
+}
+if(defined($out)) {
+  if(!open(STDOUT, ">", $out)) {
+    die "$0: $out could not be written: $!\n";
+  }
+}
+
+# Simplistic parse does not check for various malformed situations
+# like only a "From " header, bad continuation headers, or legit
+# but obscure conditions like whitespace before the colon.
+while(<>) {
+  s/\cM\cJ/\cJ/;
+
+  # "From " is always a single line header, and if present must be
+  # first (so no $this).
+  if(/^From .*/) {
+    push(@heads, $_);
+    next;
+  }
+
+  # Leading whitespace: a header continued from previous line, so
+  # $this should be set.
+  if(/^\s+\S/) {
+    $this .= $_;
+    next;
+  }
+
+  # Line of just whitespace: end of headers
+  if(/^\s*$/) {
+    push(@heads, $this);
+    last;
+  }
+
+  # New header, save last $this (if set)
+  if(defined($this)) {
+    push(@heads, $this);
+  }
+  $this = $_;
+
+} # while <> 
+
+# Note we store the : with the header to differentiate between
+# the two types of From.
+for $this (@heads) {
+
+  $this =~ /(^From |^[^:]+:)(.*)/s;
+  $header = lc($1);
+  $value  = $2;
+
+  if(defined($hv{header})) {
+    $hv{$header} .= ' ' . $value;
+  } else {
+    $hv{$header} = $value;
+  }
+} # for $this (@heads)
+
+# Copy and edit the %transform headers to output.
+for $header (keys %transform) {
+  @found = grep(/^$header/, @heads);
+  $use = shift (@found);
+
+  if(defined($use)) {
+    $use =~ m/^[^:]+:\s*(.*)/s;
+    $value = ' ' . $1;
+
+    if(defined($editor = $edit{$header})) {
+      $value = &{$editor}($value);
+      if(!defined($value)) {
+        next;
+      }
+    } else {
+      # Just normalize whitespace after :
+      $value =~ s/^\s*/ /;
+    }
+    
+    $use = $transform{$header} . $value;
+    push(@out, $use);
+  }
+} # for $header (keys %transform)
+
+# Copy and edit the @keep headers to output.
+for $header (@keep) {
+  @found = grep(/^$header/, @heads);
+  $use = shift (@found);
+
+  if(defined($use)) {
+    $use =~ m/^[^:]+:\s*(.*)/s;
+    $value = $1;
+  
+    if(defined($editor = $edit{$header})) {
+      $value = &{$editor}($value);
+      if(!defined($value)) {
+        next;
+      }
+    } else {
+      # Just normalize whitespace after :
+      $value =~ s/^\s*/ /;
+    }
+    push(@out, "$header$value");
+  }
+} # for $header (@keep)
+
+# Print the headers specified in @order, blank RHS okay
+for $header (@order) {
+  @found = grep(/^$header/i, @out);
+  $use = shift (@found);
+  if(defined($use)) {
+    # Now normalize capitalization
+    $use =~ s/^[^:]+:/$header/;
+    print $use;
+
+    # Now remove header from @out
+    @out = grep(!/^$header/i, @out);
+  }
+} # for $header (@order)
+
+# Anything left to output? Print it.
+if(@out) { print @out; }
+
+# We do not print a final blank line so that the headers can easily
+# be merged with other headers.
+
+exit;
+
+# Take a list of addresses and make an array out of them.
+# Does not normalize the address form. Does normalize whitespace.
+sub parseaddrlist {
+  my $list = shift;
+  my @list;
+  my $addr;
+  my $save;
+
+  # loop by repeatedly editing the first address off the line.
+  while($list) {
+
+    $list =~ s/^\s*(
+    		  # { "Quoted Name" <addr@site> } form
+                  (?: " (?:[^"\\]+|\\")* " \s* <[^>]+> )
+
+# After getting this:
+#  =?UTF-8?B?8J+MvVotQ29ybnk=?= =?UTF-8?B?IEJ1dHRob2xl8J+MvQ==?= Weedlord Bonerhitler 
+#		  # { Unquoted Name <addr@site> } form
+#		 |(?: [A-Za-z0-9'][-_A-Za-z0-9!' \t\n]* <[^>]+> )
+#		  # {  =?UTF-8?Q?MIME_word?= <addr@site> } form
+#		 |(?: (?: =[?][\w-]+[?]\w[?][^?]+[?]= \s*)+ <[^>]+> )
+# merge those two cases
+
+		  # { unquoted ordinary-text and-or mime-words <addr@site> } form
+ 		 |(?: (?:
+		        (?: [A-Za-z0-9'][-_A-Za-z0-9!']* \s* ) # limited first char
+		      | (?: =[?][\w-]+[?]\w[?][^?]+[?]=  \s* ) 
+		      )+
+			<[^>]+>
+		  )
+
+		  # { <addr@site> } form
+		 |(?: <[^>]+> )
+
+		  # { addr@site (Comment Name) } form
+		 |(?: [^\s@]+@[\w.-]+ \s* \([^)]*\) )
+
+		  # { addr@site } form
+		 |(?: [^\s@]+@[\w.-]+ )
+                )\s*//xs;
+
+    $addr = $1;
+    $list =~ s/^,\s*//;
+
+    # catch infinite loops due to parsing issues
+    if($save and $save eq $list) {
+      die "$0: stuck in address parsing loop, first address is problem:\n" .
+          "$save\n";
+    }
+    $save = $list;
+
+    # normalize whitespace now
+    $addr =~ s/\s+/ /g;
+    $addr =~ s/^ ?/ /;
+    $addr =~ s/ $//;
+
+    push(@list, $addr);
+  }
+
+  @list;
+} # end &parseaddrlist 
+
+__END__
+
