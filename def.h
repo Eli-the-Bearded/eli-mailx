@@ -384,3 +384,14 @@ struct ignoretab {
 #define DISP_REMB	'm'	/* aka mark */
 #define DISP_BOTH	'B'	/* mark and flag */
 
+/* just for clearer code when functions take booleans */
+#define MARK_SAVED      1
+#define NO_MARK_SAVED   0
+#define NAME_IS_VAR     1
+#define NAME_IS_FILE    0
+#define USE_PAGER       1
+#define NO_PAGER        0
+#define USE_IGNORES     1
+#define NO_IGNORES      0	/* ie all headers */
+#define SHOW_PREVIOUS   1
+#define HIDE_PREVIOUS   0
