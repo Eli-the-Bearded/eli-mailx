@@ -65,7 +65,7 @@ quitcmd(v)
 	 */
 	if (sourcing)
 		return 1;
-	if (!shown_eof) {
+	if ((!shown_eof) && (value("confirmquit") != NOSTR)) {
 	  int n = 0;
 	  char *cp;
 	  char linebuf[LINESIZE];
@@ -86,7 +86,7 @@ quitcmd(v)
 	  }
 	  return 0;
 	}
-	  
+
 	return -1;
 }
 
