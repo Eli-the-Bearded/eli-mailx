@@ -48,6 +48,11 @@ static char rcsid[] = "$OpenBSD: strings.c,v 1.5 1996/06/08 19:48:40 christos Ex
  * String allocation routines.
  * Strings handed out here are reclaimed at the top of the command
  * loop each time, so they need not be freed.
+ *
+ * Basically by having a stash of malloc()ed memory that can be known
+ * safe to wipe regularly, lots of small strings can be easily copied
+ * for a short duration and then no need to worry about the mess of
+ * remembering to free them all.
  */
 
 #include "rcv.h"
@@ -101,7 +106,7 @@ salloc(size)
 
 /*
  * Reset the string area to be empty.
- * Called to free all strings allocated
+ * Called to "free" all strings allocated
  * since last reset.
  */
 void
@@ -123,7 +128,8 @@ sreset()
 }
 
 /*
- * Make the string area permanent.
+ * Make the string area permanent. These "permanent" strings will never
+ * be overwritten because they've been dropped from the array.
  * Meant to be called in main, after initialization.
  */
 void
@@ -131,6 +137,38 @@ spreserve()
 {
 	register struct strings *sp;
 
+	/* In my tests (2019) sreport() here typically shows just one
+	 * entry used, so the "lost" memory is pretty trivial.
+	 */
 	for (sp = &stringdope[0]; sp < &stringdope[NSPACE]; sp++)
 		sp->s_topFree = NOSTR;
+}
+
+/*
+ * For debugging purposes. More interesting than clobbering the stack.
+ */
+void
+sreport()
+{
+	struct strings *sp;
+	int index, expected, have, lastunused = 0;
+
+	for (index = 0, sp = &stringdope[0]; sp < &stringdope[NSPACE]; index++, sp++) {
+		if (sp->s_topFree == NOSTR) {
+			if (lastunused && (index != NSPACE - 1)) {
+				putchar('.');
+			} else {
+				if (!lastunused)
+					putchar('\n');
+				printf("stringdope[%d] unused", index);
+				lastunused = index;
+			}
+			continue;
+		}
+		have = sp->s_nextFree - sp->s_topFree;
+		expected = STRINGSIZE << index;
+		lastunused = 0;
+		printf("\nstringdope[%d] capacity %8d, left %8d", index, expected, have);
+	}
+	putchar('\n');
 }
