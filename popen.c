@@ -191,6 +191,46 @@ Pclose(ptr)
 	return i;
 }
 
+/* 
+ * Tries to Popen the prefered pager but falls back to stdout
+ * User should wrap with setjmp() for catching closed pipes.
+ */
+FILE *
+Pageropen()
+{
+	char *cp;
+	FILE *pager;
+
+	cp = value("PAGER");
+	if (cp == NULL || *cp == '\0')
+		cp = _PATH_MORE;
+	pager = Popen(cp, "w");
+	if (pager == NULL) {
+		perror(cp);
+		pager = stdout;
+	} else
+		signal(SIGPIPE, brokpipe);
+
+	return pager;
+}
+
+/*
+ * Close the pager pipe.
+ */
+void
+Pagerclose(pager)
+	FILE *pager;
+{
+	if (pager != stdout) {
+		/*
+		 * Ignore SIGPIPE so it can't cause a duplicate close.
+		 */
+		signal(SIGPIPE, SIG_IGN);
+		Pclose(pager);
+		signal(SIGPIPE, SIG_DFL);
+	}
+}
+
 /*
  * Read a line up siz long from the specified command into the command
  * buffer. Do not include the newline at the end. Return 0 on
