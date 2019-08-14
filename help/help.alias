@@ -1,0 +1,2 @@
+Will print current aliases or set a new one. Aliases are used only for
+composing mail with the "mail" command ("rnmail" does not use them).

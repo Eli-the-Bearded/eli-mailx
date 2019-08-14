@@ -27,10 +27,25 @@ TESTPROG = mimetest utf8test
 
 ALL_PROG = $(PROG) $(CHECKPROGS) $(TESTPROG)
 
-SFILES=	mail.help mail.tildehelp
+# need to escape the # in help.# from two levels of interpolation
+HFILES= help help.! "help.\#" help.= help.? help.Copy help.Folder help.Print \
+	help.Reply help.Rnmail help.Save help.Write help.Xit help.alias \
+	help.alternatives help.cd help.chdir help.clobber help.copy \
+	help.core help.delete help.dp help.dt help.echo help.edit help.else \
+	help.endif help.exit help.file help.flag help.folder help.folders \
+	help.from help.group help.headers help.help help.highlight \
+	help.hold help.if help.ignore help.interest help.list help.mail \
+	help.mark help.mbox help.message-list help.more help.next \
+	help.preserve help.print help.quit help.reply help.retain \
+	help.rnmail help.save help.saveignore help.saveretain help.search \
+	help.set help.shell help.size help.source help.sreport help.summary \
+	help.tilde help.top help.touch help.unalias help.undelete \
+	help.unflag help.unmark help.unread help.unset help.version \
+	help.visual help.write help.xit help.z
+
 EFILES=	mail.rc
 LINKS=	${BINDIR}/mail ${BINDIR}/Mail ${BINDIR}/mail ${BINDIR}/mailx
-MFILES=	mail.1
+MFILES=	mail.1 checkutf8.1
 
 default: all
 
@@ -53,6 +68,9 @@ default: all
  checkascii: checkutf8
 	ln $> $@
 
+ checkutf8.1: checkutf8.pod
+	pod2man $> > $@
+
  .c.o:
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $<
  
@@ -68,7 +86,8 @@ default: all
 	install -c -m 755 -o root -g root -s $(CHECKPROGS) $(DESTDIR)/usr/bin/ 
 	install -c -m 644 $(MFILES) $(DESTDIR)/usr/man/man1/
 	cd misc && install -c -m 644 $(EFILES) $(DESTDIR)/etc/
-	cd misc && install -c -m 644 $(SFILES) $(DESTDIR)/usr/lib/
+	mkdir -p $(DESTDIR)/usr/lib/mail/
+	cd help && install -c -m 644 $(HFILES) $(DESTDIR)/usr/lib/mail/
 
 # these two items have a built in test suite
 mimetest: mime.c

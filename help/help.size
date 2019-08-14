@@ -1,0 +1,2 @@
+Shows the raw (not abbreviated like in "from" output) message size(s). Format
+is message number, ": ", line count, "/", and byte count.

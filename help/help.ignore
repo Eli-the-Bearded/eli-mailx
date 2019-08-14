@@ -1,0 +1,2 @@
+An alternative to the "retain" list (which has precedence), this is a list
+of headers to ignore during typical actions like "print".

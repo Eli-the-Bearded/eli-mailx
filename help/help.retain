@@ -1,0 +1,2 @@
+This is a list of headers to be shown during "print" commands, all others are
+ignored. Overrides "ignore".

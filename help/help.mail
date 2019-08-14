@@ -1,0 +1,3 @@
+Compose a new message to send using the legacy interface. Will expand any
+aliases to be proper email addresses or groups of addresses. See "alias" and
+"rnmail".

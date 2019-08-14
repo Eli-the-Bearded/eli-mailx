@@ -1,0 +1,1 @@
+Unsets an internal variable. Environment variables are not effected. See "set".

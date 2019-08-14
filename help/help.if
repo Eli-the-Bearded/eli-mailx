@@ -1,0 +1,9 @@
+Intended for use in rc files, can restrict settings for "reading" mode, for
+"sending" mode, for "etbmail", and for "heirloom". The last two are not in
+traditional mail or mailx and will end processing of the rc file in
+traditional mail/x. The "etbmail" is always true for this program(*) and
+always false my version of nail(**). The "heirloom" test is always false
+for this program and always true in my version of nail. Each case can be
+abbreviated to the first initial.
+(*): https://github.com/Eli-the-Bearded/eli-mailx
+(**): https://github.com/Eli-the-Bearded/heirloom-mailx

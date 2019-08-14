@@ -1,0 +1,4 @@
+Saves messages to a new mbox file and marks them for deletion on quit.
+Usage: "save message-list filename". The message list can be message numbers
+or a search.
+See "copy", "Copy", "save", "write", and "Write".

@@ -1,0 +1,2 @@
+Prints the "interest" list of headers from messages. The list, if unset,
+defaults to "From", "To", "Subject", and "CC". See "top".

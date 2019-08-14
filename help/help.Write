@@ -1,0 +1,3 @@
+Works like "write" but appends to the named in the variable. Usage:
+"Write message-list variable"
+See "copy", "Copy", "save", "Save", and "write".

@@ -1,0 +1,3 @@
+Quit and save changes to the current mail box. Use "exit" to not save changes.
+If `confirmquit` is set, will prompt for a confirmation if EOF has not been
+reached.

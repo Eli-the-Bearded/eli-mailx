@@ -1,0 +1,3 @@
+With the `RNMAIL` variable set, this can be used to compose mail using an
+external command. The command should offer an interface similar to trn's
+"Rnmail" script. See "mail".

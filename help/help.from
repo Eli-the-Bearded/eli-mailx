@@ -1,0 +1,7 @@
+Prints the one line summary about the message. If screen size allows,
+will show a one character flag about the message, the message number,
+the message sender, size in lines and bytes, message date, and subject.
+Often useful as a search command: "from sender" will list mail sent by
+*sender*; "from /urgent" will list mail with *urgent* in the Subject;
+"from %to:listname" will list mail with *listname* in the To: header;
+"from :u" will list mail considered unread (including new).

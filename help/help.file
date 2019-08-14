@@ -1,0 +1,4 @@
+Print the name of the current file, or switch to a new mailfile. Will save
+pending changes on switch. When printing the current file, will also
+announce the number of messages overall, unread messages, and deleted
+messages. Also called "folder".

@@ -1,0 +1,5 @@
+This echoes back it's parameters with any variables expanded. (No "$" on
+variables as in shell.) Quoting can avoid expansion, by making the parameters
+not match variables. Both internal and environment variables will be checked,
+matching other variable use by mail. Internal variables take precedence. See
+"set".

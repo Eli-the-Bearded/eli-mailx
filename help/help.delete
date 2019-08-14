@@ -1,0 +1,2 @@
+Marks messages for deletion on quit and hides them from regular commands
+immediately.

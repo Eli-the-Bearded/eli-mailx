@@ -1,0 +1,3 @@
+When `hold` is set, messages are not normally copied to mbox after being
+read.  This command is used to ask for that behavior for specified messages.
+See also "hold".

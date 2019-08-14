@@ -1,0 +1,3 @@
+Prints the first few lines of each message (including headers). Has become
+less useful as mail systems expand the number of headers on a typical
+message. See "summary".

@@ -1,0 +1,3 @@
+Shows an batch of headers including "." by default, or the batch containing
+the first name message. The batch size can be set with the variable `screen`
+and defaults to window height - 4.  See "z".

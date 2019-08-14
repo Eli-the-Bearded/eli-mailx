@@ -1,0 +1,3 @@
+Saves (appends) a message body (or bodies) without any headers to the named
+file. Usage: "write message-list filename"
+See "copy", "Copy", "save", "Save", and "Write".

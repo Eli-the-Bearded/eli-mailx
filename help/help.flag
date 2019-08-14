@@ -1,0 +1,4 @@
+Stores a flag for use with search in a message (will be saved). See "mark".
+The ":f" search parameter will limit to flagged messages;
+The ":B" search parameter will limit to flagged and marked messages;
+The ":U" search parameter will limit to messages with no flags or marks.

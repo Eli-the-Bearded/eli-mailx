@@ -1,0 +1,1 @@
+Runs an "ls" (or value of `LISTER`) on the value of the `folder` variable.

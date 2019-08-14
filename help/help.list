@@ -1,0 +1,3 @@
+Lists commands in precedence order. Shortest initial substring for a command
+(following precedence) can be used to abbreviate it. The empty string is an
+abbreviation of the first command. See "help".

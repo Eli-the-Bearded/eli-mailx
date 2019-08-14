@@ -1,0 +1,2 @@
+Like "next" but will show more than one message if requested. Uses
+pager if line count exceeds the value of "crt". See "more"

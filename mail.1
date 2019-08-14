@@ -427,6 +427,7 @@ previous message and prints it.
 .It Ic \&?
 Prints a brief summary of commands from the default file or from
 .Ar helpfile .
+With a parameter, provides help on that subject.
 .It Ic \&!
 Executes the shell
 (see
@@ -564,6 +565,10 @@ your
 file, and
 \&+\&folder means a file in your folder
 directory.
+.It Ic Folder
+This works just like
+.Ic folder
+except that a variable is used for the new file name.
 .It Ic from
 .Pq Ic f
 Takes a list of messages and prints the one line message summary, in
@@ -597,18 +602,25 @@ command.
 Can be used only evaluate commands in certain contexts. Intended for 
 use in 
 .Dq Pa ~/.mailrc
-there are three recognized conditions.
+there are four recognized conditions.
 .Ar if reading
 for reading mode;
 .Ar if sending
-when invoked to compose mail directly; and
-.Ar if elimail
+when invoked to compose mail directly;
+.Ar if etbmail
 used to hide configuration from incompatable programs that might
 also read
-.Dq Pa ~/.mailrc .
-The last form cannot be used with 
-.Ar else
-as those other programs will not understand the statement.
+.Dq Pa ~/.mailrc ;
+and lastly
+.Ar if heirloom
+used to hide configuration from this program by my version of
+.Ic nail 
+(project name "heirloom-mailx").
+The last two forms are not recognized by older versions of
+.Ic mail
+or
+.Ic nail
+and will abort processing of the file.
 .It Ic ignore
 Add the list of header fields named to the
 .Ar ignored list .
@@ -855,6 +867,11 @@ the message body
 the header) is saved.
 Extremely useful for such tasks as sending and receiving source
 program text over the message system.
+.It Ic Write
+.Pq Ic W
+Similar to
+.Ic write  ,
+except that a variable name holds the file to write.
 .It Ic xit
 .Pq Ic x
 A synonym for
@@ -1020,12 +1037,17 @@ automatically.
 .It Ar debug
 Setting the binary option
 .Ar debug
-is the same as specifying
+is the same as specifying a single
 .Fl d
 on the command line and causes
 .Nm mail
-to output all sorts of information useful for debugging
-.Nm mail  .
+to output information useful for debugging. Use of 
+.Fl d
+on the command line multiple times is required to increase verbosity.
+At a verbosity level of two, all lookups of variables are displayed to
+show when settings like
+.Ar debug
+are tested during use.
 .It Ar dot
 The binary option
 .Ar dot

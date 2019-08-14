@@ -1,0 +1,3 @@
+Prints a short help message, either the system default or the one specified
+by the `helpfile` variable. With a parameter prints help on that topic, if
+available. Use "list" for a list of commands.

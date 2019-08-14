@@ -1,0 +1,3 @@
+This works like "copy" but uses a variable to hold the filename:
+"Copy message-list variable"
+See "copy", "save", "Save", "write", and "Write".

@@ -60,6 +60,10 @@ static char rcsid[] = "$OpenBSD: cmdtab.c,v 1.6 1996/06/08 19:48:15 christos Exp
  *    flag mask: maximum number of arguments
  */
 
+/* This command table has been reordered and has some commands removed
+ * (eg, commented out) to my tastes. This, however, breaks POSIX mailx
+ * compliance. Reordering changes precedence of abbreviations.
+ */
 const struct cmd cmdtab[] = {
         /* name         function        argtype         msgflag flag mask */
 	{ "next",	next,		NDMLIST,	0,	MMNDEL },
@@ -82,7 +86,7 @@ const struct cmd cmdtab[] = {
 	{ "mbox",	mboxit,		W|MSGLIST,	0,	0 },
 	{ "more",	more,		MSGLIST,	0,	MMNDEL },
 /*	{ "page",	more,		MSGLIST,	0,	MMNDEL },
-	{ "More",	More,		MSGLIST,	0,	MMNDEL }, 
+/*	{ "More",	More,		MSGLIST,	0,	MMNDEL }, 
 /*	{ "Page",	More,		MSGLIST,	0,	MMNDEL }, */
 	{ "unread",	unread,		MSGLIST,	0,	MMNDEL },
 	{ "Unread",	unread,		MSGLIST,	0,	MMNDEL },
@@ -100,14 +104,16 @@ const struct cmd cmdtab[] = {
 	{ "version",	pversion,	M|NOLIST,	0,	0 },
 	{ "group",	group,		M|RAWLIST,	0,	1000 },
 	{ "write",	swrite,		STRLIST,	0,	0 },
+	{ "Write",	swritevar,	STRLIST,	0,	0 },
 	{ "from",	from,		MSGLIST,	0,	MMNORM },
 	{ "file",	file,		T|M|RAWLIST,	0,	1 },
+	{ "Folder",	File,		T|M|RAWLIST,	0,	1 },
 	{ "folder",	file,		T|M|RAWLIST,	0,	1 },
 	{ "folders",	folders,	T|M|NOLIST,	0,	0 },
-	{ "?",		help,		M|NOLIST,	0,	0 },
+	{ "?",		help,		M|I|RAWLIST,	0,	1 },
 	{ "z",		scroll,		M|STRLIST,	0,	0 },
 	{ "headers",	headers,	MSGLIST,	0,	MMNDEL },
-	{ "help",	help,		M|NOLIST,	0,	0 },
+	{ "help",	help,		M|I|RAWLIST,	0,	1 },
 	{ "=",		pdot,		NOLIST,		0,	0 },
 	{ "Rnmail",	rnmail,		R|I|MSGLIST,	0,	MMNDEL },
 	{ "Reply",	Respond,	R|I|MSGLIST,	0,	MMNDEL },
@@ -144,5 +150,6 @@ const struct cmd cmdtab[] = {
 	{ "core",	core,		M|NOLIST,	0,	0 },
 	{ "#",		null,		M|NOLIST,	0,	0 },
 	{ "clobber",	clobber,	M|RAWLIST,	0,	1 },
+	{ "sreport",	stringreport,	M|NOLIST,	0,	0 },
 	{ 0,		0,		0,		0,	0 }
 };
