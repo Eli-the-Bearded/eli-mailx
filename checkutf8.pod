@@ -1,0 +1,131 @@
+
+=head1 NAME
+
+checkutf8, check8859, checkascii - character set verification
+
+=head1 DESCRIPTION
+
+This is a family of bit-encoding test tools.
+
+B<checkutf8> tests that a file has valid UTF-8 encoding. The check is
+purely based on the the bit patterns, it does not check that the
+characters are assigned in any particular Unicode standard.
+
+B<check8859> tests that a file has valid ISO-8859-1 (sometimes called
+ISO-LATIN-1) encoding. The check allows US-ASCII control characters
+but does not accept the so-called "high-bit control characters"
+(octets 128 to 159). That exclusion is one of the best ways to
+distinguish a UTF-8 file with very few UTF-8 characters from ISO-8859-1.
+This test may work for other ISO-8859-* encodings, too, but is not
+tested with them.
+
+B<checkascii> tests that a file has exclusively 7-bit content in every
+octet.
+
+Each tool will test a file on standard input or a single named file.
+Any error will cause the tool to exit with a value of 1, and on complete
+success will exit with a value of 0.
+
+=head1 USAGE
+
+  	checkutf8 [options] [ file ]
+  	checkascii [options] [ file ]
+  	check8859 [options] [ file ]
+
+Charset selection defaults to the version in the filename: B<checkascii>
+checks for US-ASCII, etc; but can be explictly selected:
+
+=over 4
+
+=item *
+
+  -8 --iso-8859-1
+  
+Use ISO-8859-1 rules.
+
+=item *
+
+  -a --ascii
+  
+Use ASCII rules.
+
+=item *
+
+  -u --utf-8
+
+Use UTF-8 rules.
+
+=back
+
+Other options that work with all rule modes:
+
+=over 4
+
+=item *
+
+  -c --continue
+  
+Keeps checking after the first error. Normally this family of tools
+only tests until a single character or sequence is invalid and then
+exits. Sometimes it is useful to find additional errors in a single
+run.
+
+=item *
+
+  -q --quiet  
+  
+Makes these tools not output information about errors, but merely set
+the exit code. Normally these tools to print line and offset value for
+where the issue was found.
+
+=item *
+
+  -v --verbose
+  
+Causes these tools to print not just line and offset value for where
+an offending character or sequence starts, but also the line itself
+and an simple pointer to the location of the issue.
+
+=item *
+
+  --
+  
+End of arguments.
+
+=back
+
+
+These flags will not actually run tests, but merely cause the tools
+to print information about themselves:
+
+=over 4
+
+=item *
+
+  --help
+  
+Prints a brief usage message and exits.
+
+=item *
+
+  --version
+
+Prints a brief version string and exits.
+
+=back
+
+=head1 BUGS
+
+Some people may feel these tools should be able to handle more than
+one filename at a time.
+
+=head1 COPYRIGHT
+
+Copyright 2018 by Eli the Bearded / Benjamin Elijah Griffin.
+Released under a BSD-style license.
+
+=head1 AUTHOR
+
+Benjamin Elijah Griffin / Eli the Bearded
+
+=cut
