@@ -314,7 +314,7 @@ Usage: mail [-iInv] [-S var[=value]] [-s subject] [-c CCaddr] [-b BCCaddr]\n\
 		if (value("quiet") == NOSTR)
 			printf("Mail version %s.  Type ? for help.\n",
 				version);
-		announce();
+		announce(HIDE_PREVIOUS);
 		fflush(stdout);
 		signal(SIGINT, prevint);
 	}

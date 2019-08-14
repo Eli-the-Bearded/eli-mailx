@@ -296,7 +296,7 @@ execute(linebuf, contxt)
 	*cp2 = '\0';
 
 	/*
-	 * Look up the command; if not found, bitch.
+	 * Look up the command; if not found, complain.
 	 * Normally, a blank command would map to the
 	 * first command in the table; while sourcing,
 	 * however, we ignore blank lines to eliminate
@@ -597,11 +597,12 @@ hangup(s)
  * give the message count, and print a header listing.
  */
 void
-announce()
+announce(showprev)
+	int showprev;
 {
 	int vec[2], mdot;
 
-	mdot = newfileinfo();
+	mdot = newfileinfo(showprev);
 	vec[0] = mdot;
 	vec[1] = 0;
 	dot = &message[mdot - 1];
@@ -617,7 +618,8 @@ announce()
  * Return a likely place to set dot.
  */
 int
-newfileinfo()
+newfileinfo(showprev)
+	int showprev;
 {
 	register struct message *mp;
 	register int u, n, mdot, d, s;
@@ -669,6 +671,9 @@ newfileinfo()
 	if (readonly)
 		printf(" [Read only]");
 	printf("\n");
+	if(showprev && (prevfile[0] != 0)) {
+		printf("Previous file (#) was \"%s\"\n", prevfile);
+	}
 	return(mdot);
 }
 
