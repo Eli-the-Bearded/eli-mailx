@@ -454,7 +454,7 @@ pcmdlist(v)
 	printf("Commands are:\n");
 	for (cc = 0, cp = cmdtab; cp->c_name != NULL; cp++) {
 		cc += strlen(cp->c_name) + 2;
-		if (cc > 72) {
+		if (cc > screenwidth - 2) {
 			printf("\n");
 			cc = strlen(cp->c_name) + 2;
 		}
@@ -474,7 +474,7 @@ more(v)
 	void *v;
 {
 	int *msgvec = v;
-	return (type1(msgvec, 1, 1));
+	return (type1(msgvec, USE_IGNORES, USE_PAGER));
 }
 
 /*
@@ -486,7 +486,7 @@ More(v)
 {
 	int *msgvec = v;
 
-	return (type1(msgvec, 0, 1));
+	return (type1(msgvec, NO_IGNORES, USE_PAGER));
 }
 
 /*
@@ -498,7 +498,7 @@ type(v)
 {
 	int *msgvec = v;
 
-	return(type1(msgvec, 1, 0));
+	return(type1(msgvec, USE_IGNORES, NO_PAGER));
 }
 
 /*
@@ -510,7 +510,7 @@ Type(v)
 {
 	int *msgvec = v;
 
-	return(type1(msgvec, 0, 0));
+	return(type1(msgvec, NO_IGNORES, NO_PAGER));
 }
 
 /*
@@ -522,7 +522,7 @@ type1(msgvec, doign, page)
 	int *msgvec;
 	int doign, page;
 {
-	register *ip;
+	register int *ip;
 	struct message *mp;
 	char *cp;
 	int nlines;
@@ -544,15 +544,7 @@ type1(msgvec, doign, page)
 				nlines += message[*ip - 1].m_lines;
 		}
 		if (page || nlines > (*cp ? atoi(cp) : realscreenheight)) {
-			cp = value("PAGER");
-			if (cp == NULL || *cp == '\0')
-				cp = _PATH_MORE;
-			obuf = Popen(cp, "w");
-			if (obuf == NULL) {
-				perror(cp);
-				obuf = stdout;
-			} else
-				signal(SIGPIPE, brokpipe);
+			obuf = Pageropen();
 		}
 	}
 	for (ip = msgvec; *ip && ip - msgvec < msgCount; ip++) {
@@ -571,12 +563,7 @@ type1(msgvec, doign, page)
 	}
 close_pipe:
 	if (obuf != stdout) {
-		/*
-		 * Ignore SIGPIPE so it can't cause a duplicate close.
-		 */
-		signal(SIGPIPE, SIG_IGN);
-		Pclose(obuf);
-		signal(SIGPIPE, SIG_DFL);
+		Pagerclose(obuf);
 	}
 	return(0);
 }
