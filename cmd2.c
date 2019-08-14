@@ -143,13 +143,9 @@ int
 savevar(v)
 	void *v;
 {
-	char *vn = v;
-	char *str = value(vn);
+	char *str = v;
 
-	if(!str) {
-		return(1);
-	}
-	return save1(str, 1, "save", saveignore);
+	return save1(str, MARK_SAVED, NAME_IS_VAR, "save", saveignore);
 }
 
 /*
@@ -162,7 +158,7 @@ save(v)
 {
 	char *str = v;
 
-	return save1(str, 1, "save", saveignore);
+	return save1(str, MARK_SAVED, NAME_IS_FILE, "save", saveignore);
 }
 
 /*
@@ -174,7 +170,7 @@ copycmd(v)
 {
 	char *str = v;
 
-	return save1(str, 0, "copy", saveignore);
+	return save1(str, NO_MARK_SAVED, NAME_IS_FILE, "copy", saveignore);
 }
 /*
  * Copy a message to a file named in a variable without affected its saved-ness
@@ -183,13 +179,9 @@ int
 copycmdvar(v)
 	void *v;
 {
-	char *vn = v;
-	char *str = value(vn);
+	char *str = v;
 
-	if(!str) {
-		return(1);
-	}
-	return save1(str, 0, "copy", saveignore);
+	return save1(str, NO_MARK_SAVED, NAME_IS_VAR, "copy", saveignore);
 }
 
 /*
@@ -197,21 +189,32 @@ copycmdvar(v)
  * If mark is true, mark the message "saved."
  */
 int
-save1(str, mark, cmd, ignore)
+save1(str, mark, isvar, cmd, ignore)
 	char str[];
 	int mark;
+	int isvar;
 	char *cmd;
 	struct ignoretab *ignore;
 {
 	register int *ip;
 	register struct message *mp;
-	char *file, *disp;
+	char *file, *disp, *fvar;
 	int f, *msgvec;
 	FILE *obuf;
 
 	msgvec = (int *) salloc((msgCount + 2) * sizeof *msgvec);
-	if ((file = snarf(str, &f)) == NOSTR)
+	if ((file = snarf(str, &f)) == NOSTR) {
+		/* snarf prints an error */
 		return(1);
+	}
+	if (isvar) {
+		fvar = file;
+		file = value(fvar);
+		if (!file) {
+			printf("No could not expand %s.\n", fvar);
+			return(1);
+		}
+	}
 	if (!f) {
 		*msgvec = first(0, MMNORM);
 		if (*msgvec == NOMVEC) {
@@ -263,7 +266,20 @@ swrite(v)
 {
 	char *str = v;
 
-	return save1(str, 1, "write", ignoreall);
+	return save1(str, MARK_SAVED, NAME_IS_FILE, "write", ignoreall);
+}
+
+/*
+ * Write the indicated messages at the end of the file name
+ * in the passed variable, minus header and trailing blank line.
+ */
+int
+swritevar(v)
+	void *v;
+{
+	char *str = v;
+
+	return save1(str, MARK_SAVED, NAME_IS_VAR, "write", ignoreall);
 }
 
 /*
@@ -360,7 +376,7 @@ delm(msgvec)
 	int *msgvec;
 {
 	register struct message *mp;
-	register *ip;
+	register int *ip;
 	int last;
 
 	last = NOMVEC;
@@ -406,7 +422,7 @@ undeletecmd(v)
 {
 	int *msgvec = v;
 	register struct message *mp;
-	register *ip;
+	register int *ip;
 
 	for (ip = msgvec; *ip && ip-msgvec < msgCount; ip++) {
 		mp = &message[*ip - 1];
@@ -461,6 +477,17 @@ clobber(v)
 	else
 		times = (atoi(argv[0]) + 511) / 512;
 	clob1(times);
+	return 0;
+}
+
+/*
+ * Report on string dope memory usage.
+ */
+int
+stringreport(v)
+	void *v;
+{
+	sreport();
 	return 0;
 }
 
