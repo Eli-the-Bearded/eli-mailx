@@ -64,6 +64,7 @@ tinit()
 {
 	register char *cp;
 
+	/* run before reading user ~/.mailrc so value() not useful */
 	if ((tmpdir = getenv("TMPDIR")) == NULL) {
 		tmpdir = _PATH_TMP;
 	}

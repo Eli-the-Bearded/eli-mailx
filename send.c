@@ -585,7 +585,7 @@ fmt(str, np, fo, comma)
 	FILE *fo;
 	int comma;
 {
-	register col, len;
+	register int col, len;
 
 	comma = comma ? 1 : 0;
 	col = strlen(str);
@@ -622,7 +622,7 @@ savemail(name, fi)
 	register FILE *fo;
 	char buf[BUFSIZ];
 	char *ts;
-	register i;
+	register int i;
 	time_t now;
 
 	if ((fo = Fopen(name, "a")) == NULL) {
@@ -634,7 +634,7 @@ savemail(name, fi)
 #ifdef DONT_TRUST_CTIME
 	ts = (char*)malloc(40); /* really need just 26 */
 	if(ts == NULL) {
-	  return;
+	  return (-1);
 	}
 	ctime_r(&now, ts);
 #else

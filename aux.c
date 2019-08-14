@@ -54,10 +54,13 @@ static char *save2str __P((char *, char *));
 
 /*
  * Return a pointer to a dynamic copy of the argument.
+ * savestr() copies to malloc()ed space that will be
+ * saved until end of program (if before spreserve())
+ * or wiped before processing every new command.
  */
 char *
 savestr(str)
-	char *str;
+	const char *str;
 {
 	char *new;
 	int size = strlen(str) + 1;
@@ -530,7 +533,7 @@ char *
 skip_comment(cp)
 	register char *cp;
 {
-	register nesting = 1;
+	register int nesting = 1;
 
 	for (; nesting > 0 && *cp; cp++) {
 		switch (*cp) {

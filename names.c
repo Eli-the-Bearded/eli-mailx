@@ -239,7 +239,7 @@ outof(names, fo, hp)
 #ifdef DONT_TRUST_CTIME
 	date = (char*)malloc(40); /* really need just 26 */
 	if(date == NULL) {
-	  return;
+	  return NULL;
 	}
 	ctime_r(&now, date);
 #else

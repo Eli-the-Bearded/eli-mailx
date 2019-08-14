@@ -264,7 +264,7 @@ void
 makemessage(f)
 	FILE *f;
 {
-	register size = (msgCount + 1) * sizeof (struct message);
+	register size_t size = (msgCount + 1) * sizeof (struct message);
 
 	if (message != 0)
 		free((char *) message);

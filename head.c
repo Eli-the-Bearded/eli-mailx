@@ -196,7 +196,7 @@ copyin(src, space)
 
 /* Simple rewriting of the date from BEG's myfrm.c (where isshort is used) */
 void
-tweak(date,isshort)char*date;{
+tweak(date,isshort)char*date;int isshort;{
   int month,tp=0,src=0,dest=0;
   char time[8];
 
@@ -402,7 +402,7 @@ char *
 nextword(wp, wbuf)
 	register char *wp, *wbuf;
 {
-	register c;
+	register int c;
 
 	if (wp == NOSTR) {
 		*wbuf = 0;

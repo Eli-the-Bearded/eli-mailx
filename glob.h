@@ -103,6 +103,8 @@ jmp_buf	srbuf;
  * there are NSPACE independent areas.
  * The first holds STRINGSIZE bytes, the next
  * twice as much, and so on.
+ * These are malloc()ed as needed and never free()ed, but are reset to
+ * empty every time through command().
  */
 
 #define	NSPACE	25			/* Total number of string spaces */
