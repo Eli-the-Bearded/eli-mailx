@@ -10,7 +10,7 @@ asksub         boolean   ask about subject for native mail send
 autoprint      boolean   make "delete" work like "dp"
 charset        value     decode Subject: headers if for charset value
 confirmquit    boolean   ask before quitting if "EOF" hasn't been reached
-crt            value     size of the screen for deciding when to us a pager
+crt            value     size of the screen for deciding when to use a pager
 debug          boolean   same as a single "-d" on command line
 dot            boolean   use solitary "." on a line for EOF in native mail send
 endhlstr       value     end highlight sequence, see "highlight"
@@ -18,6 +18,7 @@ escape         value     alternative to "~" in native mail send
 folder         value     a directory for relative "file" filenames
 ignore         boolean   ignore "interrupts" (eg <ctrl-c>)
 hold           boolean   leave messages in system mailbox by default
+helpfile       value     base name of file shown for "help" command
 indentprefix   value     used to prefix quoted mail in native mail send
 interactive    boolean   set when not "source"ing or reading a mailrc
 keepsave       boolean   set so that "save"d a messages won't be purged on quit
@@ -27,6 +28,7 @@ nosave         boolean   disables dead.letter saving in native mail
 quiet          boolean   hides some informational only messages
 record         value     a filename into which record outgoing native mail
 Replyall       boolean   swap the meaning of "Reply" and "reply"
+screen         value     how many lines to show in a screenful of headers
 searchheaders  boolean   set to use /Header:value searches with / instead of %
 sendmail       boolean   a program like "sendmail" used in native mail
 show-rcpt      boolean   in header lists (eg "from") use recipent not sender
@@ -36,7 +38,7 @@ verbose        boolean   shows sendmail output in native mail send
 
 All "value" settings can be set with environment variables or native ones. The
 following are ones that are expected (but need not be) set as environment
-variables. These all take a value.
+variables. Native has priority over environment. These all take a value.
 
 EDITOR         default editor to use (but VISUAL will override)
 DEAD           the name of the dead.letter file
