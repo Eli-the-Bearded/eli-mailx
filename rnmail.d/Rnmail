@@ -60,7 +60,11 @@ mboxsaver=/usr/lib/trn/mbox.saver
 # formail comes in the procmail package, it's used to find the
 # envelope address we should use.
 formail=formail
-is_unicode=checkutf8
+
+checkutf8="checkutf8 -v"
+check8859="check8859 -v"
+checkascii="checkascii -v"
+
 
 # system tools
 mailer="${RNMAILER-/usr/sbin/sendmail}"
@@ -312,14 +316,40 @@ EOH
 	done
 	${VISUAL-${EDITOR-$defeditor}} $tmpart $oldart
 	trap "$rescue" 2
-	state=ask
+	state=check
 	;;
 	
+    check)
+	# only check headers for charset declarations, and only if
+	# valid MIME (has a Mime-Version: header).
+        $sed -ne '1,/^[	 ]*$/ p' $tmpart > $tmpart.head
+	result=
+	# with no declartion, assume ASCII
+	cstest=$checkascii
+	if $grep -i '^mime-version:.*1' > /dev/null $tmpart.head ; then
+		if $grep -Ei 'charset=[^a-z0-9]?utf-8' > /dev/null $tmpart.head ; then
+			cstest="$checkutf8"
+		fi
+		if $grep -Ei 'charset=[^a-z0-9]?iso-8859' > /dev/null $tmpart.head ; then
+			cstest="$check8859"
+		fi
+		if $grep -Ei 'charset=[^a-z0-9]?[us-]*ascii' > /dev/null $tmpart.head ; then
+			cstest="$checkascii"
+		fi
+	fi
+	result=`$cstest $tmpart`
+
+	if $test "X$result" != X ; then
+		$echo "Warning failed character set test $cstest:"
+		$echo "$result"
+	fi
+	$rm -f $tmpart.head
+
+	state=ask
+	;;
+
     ask)
 	$echo ""
-        if $is_unicode $tmpart ; then : okay ; else
-            $echo "Warning: not UTF-8 encoded"
-        fi
 	$echo $n "Check spelling, Send, Abort, Edit, or List? $c"
 	read ans
 
