@@ -79,8 +79,10 @@ send(mp, obuf, doign, prefix)
 	int prefixlen = 0;
 	int debughl = 0;
 
-	if (value("debughl") != NOSTR)
-	  	debughl = 1;
+	/* Trigger old code for highlight debugging.
+	 * if (value("debughl") != NOSTR)
+	 * 	debughl = 1;
+	 */
 
 	/*
 	 * Compute the prefix string, without trailing whitespace
