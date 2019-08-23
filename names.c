@@ -122,6 +122,7 @@ extract(line, ntype)
 
 /*
  * Turn a list of names into a string of the same names.
+ * ntype other than "0" is no longer used.
  */
 char *
 detract(np, ntype)
