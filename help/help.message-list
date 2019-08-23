@@ -1,8 +1,19 @@
 A <message list> can be a list of one or more message numbers with special
-values of "^" for 1, "$" for last message, and "." for current message. A
-hyphen can mark a range. Example "^-5 . 11 19-$" Or, instead of message
-numbers, a search can be used. There are several different ways to search. All
-searches ignore case.
+values:
+
+  .		current message
+  ^		message 1
+  $		last message in file
+  +		next message after dot
+  -		previous message before dot
+
+Additionally a hyphen ("-") can indicate a range and "*" is all messages.
+Examples: "*" is equivilent fo "^ - $", and "^-5 11 19-$" is all messages but
+6 through 10 and 12 through 18.
+
+Or, instead of message numbers, a search can be used. There are several
+different ways to search. All searches ignore case.
+
   email@address		searches the email address in From headers
   /topic		searches the Subject for topic
   "/multi word topic"	searches the Subject for "multi word topic"
@@ -10,9 +21,15 @@ searches ignore case.
   "%From:Real Name"	searches for multi word values in headers
   > NUM flag		searches for mail with over NUM "l" lines, "C" 100's
 			of lines; "b" bytes, "k" 1024s of bytes, "M" megs;
-  < NUM flag		like < but less than; also = for exactly equal
-If `searchheaders` is set, / searches always work like % searches.
+  < NUM flag		like "<" but less than; also "=" for exactly equal
+  # NUM flag		finds the message at a particular "l"ine or "b"yte
+
+If `searchheaders` is set, "/" searches always work like "%" searches. A note
+on Subject line searches: they search the raw content, not the decoded value
+(decoding only happens when `charset` is set and matches the header charset).
+
 Filters that can be applied a search or a list of message numbers:
+
   :n	message was new when mail started
   :o	message was old when mail started
   :r	message is marked read
@@ -22,6 +39,8 @@ Filters that can be applied a search or a list of message numbers:
   :m	message has been "mark"ed by the user
   :B	message has been "flag"ed and "mark"ed
   :U	message has neither been "flag"ed and "mark"ed
-Special lists: ! is a repeat of last selection; a blank % search is all mail.
-A good way to test a message list is with the "from" command, then use ! to
-repeat that with another action like "save" or "delete".
+
+Special lists: "!" is a repeat of last selection; "~" is the inverse of last
+selection and a blank "%" search is all mall (just like "*"). A good way to
+test a message list is with the "from" command, then use "!" to repeat that
+with another action like "save" or "delete".

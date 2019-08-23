@@ -72,7 +72,7 @@ setptr(ibuf)
 	struct message this;
 	FILE *mestmp;
 	off_t offset;
-	int maybe, inhead;
+	int maybe, inhead, alllines;
 	char linebuf[LINESIZE];
 
 	/* Get temporary file. */
@@ -89,11 +89,13 @@ setptr(ibuf)
 	maybe = 1;
 	inhead = 0;
 	offset = 0;
+	alllines = 0;
 	this.m_flag = MUSED|MNEW;
 	this.m_size = 0;
 	this.m_lines = 0;
 	this.m_block = 0;
 	this.m_offset = 0;
+	this.m_loffset = 0;
 	for (;;) {
 		if (fgets(linebuf, LINESIZE, ibuf) == NULL) {
 			if (append(&this, mestmp)) {
@@ -122,6 +124,7 @@ setptr(ibuf)
 			/* block number in file, and how far into that block */
 			this.m_block = blockof(offset);
 			this.m_offset = offsetof(offset);
+			this.m_loffset = alllines;
 			inhead = 1;
 		} else if (linebuf[0] == 0) {
 			inhead = 0;
@@ -153,6 +156,7 @@ setptr(ibuf)
 		offset += count;
 		this.m_size += count;
 		this.m_lines++;
+		alllines++;
 		maybe = linebuf[0] == 0;
 	}
 }

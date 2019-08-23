@@ -291,7 +291,7 @@ execute(linebuf, contxt)
 		return(0);
 	}
 	cp2 = word;
-	while (*cp && index(" \t0123456789$^.:/-+*'\"", *cp) == NOSTR)
+	while (*cp && index(TOKEN_SEP, *cp) == NOSTR)
 		*cp2++ = *cp++;
 	*cp2 = '\0';
 

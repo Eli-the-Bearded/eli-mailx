@@ -58,7 +58,7 @@
 #define	APPEND				/* New mail goes to end of mailbox */
 
 #define	ESCAPE		'~'		/* Default escape for sending */
-#define	NMLSIZE		1024		/* max names in a message list */
+#define	NMLSIZE		1024		/* max message list search string */
 #define	PATHSIZE	MAXPATHLEN	/* Size of pathnames throughout */
 #define	HSHSIZE		59		/* Hash size for aliases and vars */
 #define	LINESIZE	BUFSIZ		/* max readable line width */
@@ -66,6 +66,13 @@
 #define	MAXARGC		1024		/* Maximum list of raw strings */
 #define	NOSTR		((char *) 0)	/* Null string pointer */
 #define	MAXEXP		25		/* Maximum expansion of aliases */
+
+/* Where to break stop when searching for a command in input no command
+ * cmdtab should have a name using any of these characters.
+ * Note that ! is a command and a parameter to a command, so
+ * "f!" can't work the same as "f !" , but "f~" and "f ~" will work.
+ */
+#define TOKEN_SEP	" \t0123456789~()$^.:/%-+*'\""
 
 #define	equal(a, b)	(strncmp(a,b,BUFSIZ)==0)/* A nice function to string compare */
 
@@ -81,6 +88,7 @@ struct message {
 	long	m_offset;		/* offset in block of message */
 	long	m_size;			/* Bytes in the message */
 	long	m_lines;		/* Lines in the message */
+	long	m_loffset;		/* Lines prior to this message */
 };
 
 /*
@@ -121,7 +129,7 @@ struct message {
 /*
  * Format of the command description table.
  * The actual table is declared and initialized
- * in lex.c
+ * in cmdtab.c
  */
 struct cmd {
 	char	*c_name;		/* Name of command */
@@ -258,20 +266,24 @@ struct ignoretab {
 
 #define	TEOL	0			/* End of the command line */
 #define	TNUMBER	1			/* A message number */
-#define	TDASH	2			/* A simple dash */
 #define	TSTRING	3			/* A string (possibly containing -) */
-#define	TDOT	4			/* A "." */
-#define	TUP	5			/* An "^" */
-#define	TDOLLAR	6			/* A "$" */
-#define	TSTAR	7			/* A "*" */
-#define	TOPEN	8			/* An '(' */
-#define	TCLOSE	9			/* A ')' */
-#define TPLUS	10			/* A '+' */
-#define TERROR	11			/* A lexical error */
-#define TBANG	12			/* A '!' */
-#define TOVER	13			/* A '>' */
-#define TUNDER	14			/* A '<' */
-#define TEQUAL	15			/* A '=' */
+#define	TERROR	11			/* A lexical error */
+#define	TDASH	'-'			/* Previous message or range operator */
+#define	TDOT	'.'			/* Current message */
+#define	TUP	'^'			/* Message #1 */
+#define	TDOLLAR	'$'			/* Last message */
+#define	TSTAR	'*'			/* All messages */
+#define	TPLUS	'+'			/* Next message */
+#define	TBANG	'!'			/* Entire previous message-list */
+#define	TTILDE	'~'			/* Invert previous message-list */
+#define	TOVER	'>'			/* Size check operator */
+#define	TUNDER	'<'			/* Size check operator */
+#define	TEQUAL	'='			/* Size check operator */
+#define	THASH	'#'			/* Line / byte position operator */
+/* These are not used yet */
+#define	TOPEN	'('
+#define	TCLOSE	')'
+#define	TSEMI	';'
 
 #define	REGDEP	2			/* Maximum regret depth. */
 #define	STRINGLEN	1024		/* Maximum length of string token */
@@ -284,8 +296,8 @@ struct ignoretab {
 #define	CANY		0		/* Execute in send or receive mode */
 #define	CRCV		1		/* Execute in receive mode only */
 #define	CSEND		2		/* Execute in send mode only */
-#define CHEIRLOOM	5		/* We never execute */
-#define CETBMAIL	6		/* We always execute */
+#define	CHEIRLOOM	5		/* We never execute */
+#define	CETBMAIL	6		/* We always execute */
 
 /*
  * Kludges to handle the change from setexit / reset to setjmp / longjmp
@@ -332,12 +344,12 @@ struct ignoretab {
 #define	CMUNREAD	 04		/* Unread messages */
 #define	CMDELETED	010		/* Deleted messages */
 #define	CMREAD		020		/* Read messages */
-#define CMREMEMBER     0100		/* user session-only flagged messages */
-#define CMFLAG         0200		/* user saved flaged messages */
-#define CMNOUSER       0400		/* neither user saved flagged messages */
+#define	CMREMEMBER     0100		/* user session-only flagged messages */
+#define	CMFLAG         0200		/* user saved flaged messages */
+#define	CMNOUSER       0400		/* neither user saved flagged messages */
 
-#define CMBOTHUSER     0300		/* either user flagged messages */
-#define M_ALL          0337		/* All possible messages */
+#define	CMBOTHUSER     0300		/* either user flagged messages */
+#define	M_ALL          0337		/* All possible messages */
 
 /* size check values */
 #define SC_LINES	  1		/* check m_lines */
@@ -360,6 +372,9 @@ struct ignoretab {
 #define TO_CENT(x) (((x) + 99) / 100)
 #define TO_KILO(x) (((x) + 1023) / 1024)
 #define TO_MEGA(x) (((x) + 1048575) / 1048576)
+#define FROM_CENT(x) ((x) * 100)
+#define FROM_KILO(x) ((x) * 1024)
+#define FROM_MEGA(x) ((x) * 1048576)
 
 /* for flags on the Status: header */
 #define STATUS_SIZE	8

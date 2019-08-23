@@ -130,6 +130,7 @@ markall(buf, f)
 	register struct message *mp;
 	char *namelist[NMLSIZE], *bufp;
 	int tok, beg, mc, star, other, valdot, colmod, colresult, check_value;
+	int offset, end_off;
 
 	valdot = dot - &message[0] + 1;
 	colmod = 0;
@@ -152,13 +153,14 @@ markall(buf, f)
 		 *     and if it looks right, operate on it with (eg) "d !"
                  */
 		case TBANG:
+		case TTILDE:
 			if (other) {
-				printf("Can't mix \"*\" or \"!\" with anything\n");
+#define CANT_MIX_EM		printf("Can't mix \"*\", \"!\", \"~\" with anything\n");
 				return(-1);
 			}
 			other++;
 			for (i = 1; i <= msgCount; i++)
-				usesavemark(i);
+				usesavemark(i, (TTILDE == tok));
 			break;
 
 		case TNUMBER:
@@ -238,6 +240,61 @@ number:
 				*np++ = savestr(lexstring);
 			break;
 
+		case THASH:
+			if (lexsizecheck < 0) {
+				puts("Need an offset parameter\n");
+				return(-1);
+			}
+			switch (lexsizeflag) {
+				case SC_LINES:
+				case SC_BYTES:
+					check_value = lexsizecheck;
+					break;
+				case SC_CLINES:
+					check_value = FROM_CENT(lexsizecheck);
+					lexsizeflag = SC_LINES;
+					break;
+				case SC_KBYTES:
+					check_value = FROM_KILO(lexsizecheck);
+					lexsizeflag = SC_BYTES;
+					break;
+				case SC_MBYTES:
+					check_value = FROM_MEGA(lexsizecheck);
+					lexsizeflag = SC_BYTES;
+					break;
+			}
+			for (i = 0; i < msgCount; i++)
+				if (f == M_ALL ||
+				    (message[i].m_flag & MDELETED) == f) {
+					if(SC_BYTES == lexsizeflag) {
+						offset  = message[i].m_offset
+							+ ( BLOCK_SIZE *
+						  	message[i].m_block );
+						end_off = offset +
+							message[i].m_size;
+					} else {
+						/* lines */
+						offset  = message[i].m_loffset;
+						end_off = offset +
+							message[i].m_lines;
+					}
+
+					if ((offset <= check_value) &&
+					    (check_value <= end_off)
+						   ) {
+						mark(i+1);
+						mc++;
+					}
+				}
+			if (mc == 0) {
+				printf("%s %d out of bounds (max %d) or deleted.\n",
+				(SC_BYTES == lexsizeflag)? "Byte" : "Line",
+				check_value, end_off);
+				return(-1);
+			}
+			break;
+
+
 		case TOVER:
 		case TUNDER:
 		case TEQUAL:
@@ -302,7 +359,7 @@ number:
 
 		case TSTAR:
 			if (other) {
-				printf("Can't mix \"*\" or \"!\" with anything\n");
+				CANT_MIX_EM;
 				return(-1);
 			}
 			star++;
@@ -587,18 +644,23 @@ struct lex {
 	{ '*',	TSTAR },
 	{ '-',	TDASH },
 	{ '+',	TPLUS },
-	{ '(',	TOPEN },
-	{ ')',	TCLOSE },
+	{ '(',	TOPEN },	/* not currently used in parser */
+	{ ')',	TCLOSE },	/* not currently used in parser */
 	{ '!',	TBANG },
+	{ '~',  TTILDE },	/* the anti ! */
 	{ 0,	0 }
 };
 struct lex sizechecks[] = {
 	{ '=',	TEQUAL },
 	{ '<',	TUNDER },
 	{ '>',	TOVER },
+	{ '#',  THASH },	/* finds offsets into mbox, not sizes */
 	{ 0,	0 }
 };
 
+/* The pointer sp will be changed to point to the next thing to scan when
+ * returning a token. That next thing may just be a null for end of line.
+ */
 int
 scan(sp)
 	char **sp;
@@ -695,11 +757,11 @@ scan(sp)
 					lexsizecheck = lexsizecheck*10 + c - '0';
 					c = *cp++;
 				}
-				*sp = --cp;
 			} else {
 				fputs("Could not understand size check\n", stderr);
 				return(TERROR);
 			}
+
 
 			/* skip whitespace and test for EOL */
 			while (c == ' ' || c == '\t')
@@ -740,6 +802,7 @@ scan(sp)
 			}
 
 			c = *cp++;
+			*sp = cp;
 			return(lp->l_token);
 		} /* size check operator */
 
@@ -954,16 +1017,18 @@ unmark(mesg)
  * particular action, and the saved marks are accessed via ! history.
  */
 void
-usesavemark(mesg)
+usesavemark(mesg,invert)
 	int mesg;
+	int invert;
 {
-	register int i;
-
-	i = mesg;
-	if (i < 1 || i > msgCount)
+	if (mesg < 1 || mesg > msgCount)
 		panic("Bad message number to usesavemark");
-        if (message[i-1].m_flag & MLASTMARK) 
-		message[i-1].m_flag |= MMARK;
+        if (message[mesg-1].m_flag & MLASTMARK) {
+		message[mesg-1].m_flag |= MMARK;
+	}
+	if (invert) {
+		message[mesg-1].m_flag ^= MMARK;
+	}
 }
 
 /*

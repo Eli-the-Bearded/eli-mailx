@@ -248,6 +248,18 @@ kilobytes (1024 bytes) in a message
 megabytes in a message
 .El
 .Pp
+There is also a 
+.Ql Li \&#
+operator with similar syntax intended to select the message at a particular
+line or byte offset into the entire file. (The other flags can still be used,
+eg
+.Ql Li C
+means the number given should be multiplied by 100 and then used as a line
+number, if you ever might want to do that.) Selecting a message by line
+offset is default and particularly useful in conjunction with tools like
+.Xr grep 1
+which can report a line number of something interesting.
+.Pp
 Message searches can be filtered by various attributes like "new" or "old"
 using the colon operator:
 .Bl -tag -width flag
@@ -284,6 +296,8 @@ The special name
 addresses all messages,
 .Ql Li \&!
 reuses the previous specified set,
+.Ql Li \&~
+uses the inverse of the previous specified set,
 .Ql Li \&^
 names the first message, and
 .Ql Li \&$

@@ -281,7 +281,7 @@ int	 type __P((void *));
 int	 type1 __P((int *, int, int));
 int	 undeletecmd __P((void *));
 void	 unmark __P((int));
-void	 usesavemark __P((int));
+void	 usesavemark __P((int, int));
 char	**unpack __P((struct name *));
 int	 unread __P((void *));
 void	 unregister_file __P((FILE *));
