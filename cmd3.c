@@ -178,14 +178,15 @@ find_help(topic)
 	stopic = savestr(topic);
 	/* avoid bad user input */
 	for (n = stopic; *n != 0; n++) {
-		if ((*n >= 'a') && (*n <= 'z')) { return NOSTR; }
-		if ((*n >= 'A') && (*n <= 'Z')) { return NOSTR; }
-		if ((*n >= '0') && (*n <= '9')) { return NOSTR; }
-		if (*n == '!') { return NOSTR; }
-		if (*n == '#') { return NOSTR; }
-		if (*n == '=') { return NOSTR; }
-		if (*n == '?') { return NOSTR; }
-		if (*n == '-') { return NOSTR; }
+		if ((*n >= 'a') && (*n <= 'z')) { continue; }
+		if ((*n >= 'A') && (*n <= 'Z')) { continue; }
+		if ((*n >= '0') && (*n <= '9')) { continue; }
+		if (*n == '!') { continue; }
+		if (*n == '#') { continue; }
+		if (*n == '=') { continue; }
+		if (*n == '?') { continue; }
+		if (*n == '-') { continue; }
+		return NOSTR;
 	}
 	
 	snprintf(hname, PATHSIZE, "%s.%s", helpfile, stopic);
