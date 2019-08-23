@@ -1,0 +1,55 @@
+There are variables that can be "set" or "unset" which will change the way
+mail works. These settings can be booleans or contain values, if a boolean
+has a value assigned to it, the behavior change may not take effect.
+
+append         boolean   put existing mbox *after* newly mboxed stuff
+ask            boolean   ask about subject for native mail send
+askbcc         boolean   ask about CC list for native mail send
+askcc          boolean   ask about CC list for native mail send
+asksub         boolean   ask about subject for native mail send
+autoprint      boolean   make "delete" work like "dp"
+charset        value     decode Subject: headers if for charset value
+confirmquit    boolean   ask before quitting if "EOF" hasn't been reached
+crt            value     size of the screen for deciding when to us a pager
+debug          boolean   same as a single "-d" on command line
+dot            boolean   use solitary "." on a line for EOF in native mail send
+endhlstr       value     end highlight sequence, see "highlight"
+escape         value     alternative to "~" in native mail send
+folder         value     a directory for relative "file" filenames
+ignore         boolean   ignore "interrupts" (eg <ctrl-c>)
+hold           boolean   leave messages in system mailbox by default
+indentprefix   value     used to prefix quoted mail in native mail send
+interactive    boolean   set when not "source"ing or reading a mailrc
+keepsave       boolean   set so that "save"d a messages won't be purged on quit
+metoo          boolean   set to include yourself in native mail group messages
+noheader       boolean   surpress header listings on mail open
+nosave         boolean   disables dead.letter saving in native mail
+quiet          boolean   hides some informational only messages
+record         value     a filename into which record outgoing native mail
+Replyall       boolean   swap the meaning of "Reply" and "reply"
+searchheaders  boolean   set to use /Header:value searches with / instead of %
+sendmail       boolean   a program like "sendmail" used in native mail
+show-rcpt      boolean   in header lists (eg "from") use recipent not sender
+starthlstr     value     start highlight sequence, see "highlight"
+toplines       value     number of lines to show with "top"
+verbose        boolean   shows sendmail output in native mail send
+
+All "value" settings can be set with environment variables or native ones. The
+following are ones that are expected (but need not be) set as environment
+variables. These all take a value.
+
+EDITOR         default editor to use (but VISUAL will override)
+DEAD           the name of the dead.letter file
+LISTER         program to list the `folder` directory with "folders"
+MBOX           the name of the mbox file
+PAGER          a program like "more" or "less" to page output
+RNMAIL         a program like "Rnmail" to compose and send email
+SHELL          a shell for ! shell escape
+VISUAL         a higher precedence default editor
+
+These will only be checked in the environment, native settings will not work:
+
+HOME           where the user's personal files belong
+MAIL           the main mail in-box
+TMPDIR         where to create the temporary files (fast storage preferred)
+USER           the username for reading and sending mail

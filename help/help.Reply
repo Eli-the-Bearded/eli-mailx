@@ -1,2 +1,2 @@
-By default, this is a reply-to-sender instead of reply-to-all. Setting the
-`Replyall` variable will switch the behavior with "reply".
+By default, this is a native mail reply-to-sender instead of reply-to-all.
+Setting the `Replyall` variable will switch the behavior with "reply".

@@ -3,4 +3,5 @@ only set or show variables within mail, other usages of variables will also
 check the environment. Can set multiple variables at once either as booleans
 or with values. Values can contain ~ or $ENVIRONMENT references which will be
 expanded if used as a filename (eg for -F on the command line). Backticks can
-be used to set a value based on the output of a program run. See "echo".
+be used to set a value based on the output of a program run. See "echo". See
+"settings" for variables that change mail's behavior.
