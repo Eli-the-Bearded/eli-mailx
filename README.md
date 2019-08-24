@@ -12,6 +12,8 @@ Several features that are important to me:
     * `f > 500M` find mail over 500 megabytes
     * `f = 10c`  find mail with 1000 (ten hundreds) of lines (using the
       same rounding rules the display uses)
+  * Found a line number with `grep -n`? Use `p #8331` to print the
+    message containing line 8331.
   * Instead of needing to `set searchheaders`, a different search
     prefix can be used (have searchheaders enabled makes regular
     searches slower):
@@ -19,7 +21,12 @@ Several features that are important to me:
       "term of interest" in it.
   * A history of exactly one search for the use-case of searching with
     the `from` command non-destructively and then applying a command,
-    e.g., `delete` to those same matched messages.
+    e.g., `delete` to those same matched messages. Use `!` as a message
+    list for that history or `~` as a message list to invert that prior
+    selection.
+  * A `summary` command that prints only pre-selected headers as a 
+    modernization of the old `top` command. The `interest` list can
+    customize the header selection.
 
 * Rnmail command, uses a shell script (derived from the one included with
   `rn`/`trn`) to compose repiles to mail
@@ -28,6 +35,7 @@ Several features that are important to me:
     * Arbitrary headers can be set or edited.
     * So the MIME savvy user can compose MIME email.
     * Mail "From" any special address is easy to send.
+  * Example scripts in rnmail.d/
 
 * Header highlighting, selected by the same interface as header hiding.
   * Highlighting pre- and post-fixes an arbitrary string, which can be
@@ -38,6 +46,10 @@ Several features that are important to me:
 * Variables are used in more places, such as to hold the destination of
   mailboxes to `Save` files to, or read mail `-F`rom. The `echo` command
   has been made useful to examine variables.
+
+* Help has been rewritten to support multiple help files on different
+  topics. For built-in commands it also explains parameters used based
+  on the flags used internally.
 
 * The `touch` command fixed to mark messages as read without reading them.
   * The `unread` command has always existed to mark as unread.
