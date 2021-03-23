@@ -275,6 +275,7 @@ void	 tinit __P((void));
 void	 to7strcpy __P((char *, char *, int));
 int	 top __P((void *));
 void	 touch __P((struct message *));
+int	 toucheof __P((void *));
 void	 ttyint __P((int));
 void	 ttystop __P((int));
 int	 type __P((void *));

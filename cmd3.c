@@ -723,9 +723,33 @@ file(v)
 		newfileinfo(SHOW_PREVIOUS);
 		return 0;
 	}
+	if ((!shown_eof) && (value("confirmquit") != NOSTR)) {
+	  int n = 0;
+	  char *cp;
+	  char linebuf[LINESIZE];
+
+	  /* Switch files is much more difficult to to accidentally
+	   * than quitting, so reverse the default from quit().
+	   * (Switching files is just as dangerous to state in the
+	   * file, hence prompting at all.)
+	   */
+	  printf("Really switch to '%s'? [y] ", *argv);
+	  fflush(stdout);
+	  if (readline(input, &linebuf[n], LINESIZE) < 0) {
+	    /* EOF */
+            return 1;
+          } else
+	  if ((n = strlen(linebuf)) > 0) {
+            for (cp = linebuf; isspace(*cp); cp++, n--)
+	  	1;
+	    if ((*cp == 'n') || (*cp == 'N')) return 0;
+	  }
+	}
+
 	if (setfile(*argv) < 0)
 		return 1;
 	announce(HIDE_PREVIOUS);
+	shown_eof = 0;
 	return 0;
 }
 

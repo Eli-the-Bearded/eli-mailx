@@ -441,6 +441,18 @@ pdot(v)
 }
 
 /*
+ * Touch the EOF flag to silence confirmquit option
+ */
+int
+toucheof(v)
+	void *v;
+{
+	shown_eof = 1;
+	 
+	return(0);
+}
+
+/*
  * Print out all the possible commands.
  */
 int

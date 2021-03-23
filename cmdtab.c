@@ -128,6 +128,7 @@ const struct cmd cmdtab[] = {
 	{ "Xit",	rexit,		M|NOLIST,	0,	0 },
 	{ "xit",	rexit,		M|NOLIST,	0,	0 },
 	{ "exit",	rexit,		M|NOLIST,	0,	0 },
+	{ "eof",	toucheof,	NOLIST,		0,	0 },
 	{ "size",	messize,	MSGLIST,	0,	MMNDEL },
 	{ "hold",	preserve,	W|MSGLIST,	0,	MMNDEL },
 	{ "flag",	sflag,		W|MSGLIST,	0,	MMNDEL },
